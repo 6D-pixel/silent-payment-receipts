@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" width="880" height="480" role="img" aria-labelledby="title desc">
+  <title id="title">How a silent-payment receipt works</title>
+  <desc id="desc">Alice pays 0.30 BTC to a shop's silent-payment address. On chain the output is a random-looking taproot key that only the shop can recognise. The shop says it was never paid. Alice sends a receipt for Order #1001, a 33-byte share and a 64-byte proof, to a marketplace. The marketplace fetches the transaction from its own node, checks the proof, rebuilds the shop's output key and finds that it matches output 0, so the receipt is valid.</desc>
+  <style>
+    :root {
+      --bg: #ffffff; --panel: #f6f8fa; --line: #d0d7de; --text: #1f2328; --muted: #59636e;
+      --btc: #c56a00; --btc-fill: #fff4e5; --blue: #0969da; --blue-fill: #ddf4ff;
+      --green: #1a7f37; --green-fill: #dafbe1; --red: #cf222e; --red-fill: #ffebe9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117; --panel: #161b22; --line: #30363d; --text: #e6edf3; --muted: #9198a1;
+        --btc: #f0a644; --btc-fill: #2d2110; --blue: #4493f8; --blue-fill: #0c2d4f;
+        --green: #3fb950; --green-fill: #0f2e19; --red: #f85149; --red-fill: #3b1418;
+      }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: var(--text); font-size: 13px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .muted { fill: var(--muted); }
+    .small { font-size: 12px; }
+    .bold { font-weight: 600; }
+    .glyph { fill: none; stroke: var(--text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+    .flow { stroke-dasharray: 6 5; animation: flow 0.8s linear infinite; }
+
+    .anim { animation-duration: 18s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: ease-in-out; }
+    .c1 { animation-name: c1; } .c2 { animation-name: c2; } .c3 { animation-name: c3; }
+    .c4 { animation-name: c4; } .c5 { animation-name: c5; } .c6 { animation-name: c6; }
+    .p1 { animation-name: p1; } .p2 { animation-name: p2; } .p3 { animation-name: p3; }
+    .p5 { animation-name: p5; } .p6 { animation-name: p6; }
+    .coin { animation-name: coin; } .hl { animation-name: hl; } .rc { animation-name: rc; }
+    .static-cap { opacity: 0; }
+
+    /* Six steps of 3 s each. cN: caption shown only during step N. pN: shown from step N on. */
+    @keyframes c1 { 0% { opacity: 0 } 1% { opacity: 1 } 15.6% { opacity: 1 } 16.6% { opacity: 0 } 100% { opacity: 0 } }
+    @keyframes c2 { 0%, 16.7% { opacity: 0 } 17.7% { opacity: 1 } 32.3% { opacity: 1 } 33.3% { opacity: 0 } 100% { opacity: 0 } }
+    @keyframes c3 { 0%, 33.4% { opacity: 0 } 34.4% { opacity: 1 } 49% { opacity: 1 } 50% { opacity: 0 } 100% { opacity: 0 } }
+    @keyframes c4 { 0%, 50.1% { opacity: 0 } 51.1% { opacity: 1 } 65.7% { opacity: 1 } 66.7% { opacity: 0 } 100% { opacity: 0 } }
+    @keyframes c5 { 0%, 66.8% { opacity: 0 } 67.8% { opacity: 1 } 82.3% { opacity: 1 } 83.3% { opacity: 0 } 100% { opacity: 0 } }
+    @keyframes c6 { 0%, 83.4% { opacity: 0 } 84.4% { opacity: 1 } 98% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes p1 { 0% { opacity: 0 } 2% { opacity: 1 } 97% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes p2 { 0%, 16.7% { opacity: 0 } 18.7% { opacity: 1 } 97% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes p3 { 0%, 33.4% { opacity: 0 } 35.4% { opacity: 1 } 97% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes p5 { 0%, 66.8% { opacity: 0 } 68.8% { opacity: 1 } 97% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes p6 { 0%, 83.4% { opacity: 0 } 85.4% { opacity: 1 } 97% { opacity: 1 } 100% { opacity: 0 } }
+    @keyframes coin { 0% { opacity: 0; transform: translate(0, 0) } 2% { opacity: 1; transform: translate(0, 0) }
+                      11% { opacity: 1; transform: translate(152px, 0) } 13%, 100% { opacity: 0; transform: translate(152px, 0) } }
+    @keyframes hl { 0%, 11% { opacity: 0 } 13% { opacity: 1 } 83.4% { opacity: 1 } 84.4%, 100% { opacity: 0 } }
+    @keyframes rc { 0%, 50.1% { opacity: 0; transform: translate(0, 0) } 52% { opacity: 1; transform: translate(0, 0) }
+                    62% { opacity: 1; transform: translate(550px, 0) } 97% { opacity: 1; transform: translate(550px, 0) }
+                    100% { opacity: 0; transform: translate(550px, 0) } }
+    @keyframes flow { to { stroke-dashoffset: -11 } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .anim, .flow { animation: none; }
+      .cap, .coin, .hl { opacity: 0; }
+      .rc { transform: translate(550px, 0); }
+      .static-cap { opacity: 1; }
+    }
+  </style>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8c959f"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="879" height="479" rx="12" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="32" y="44" class="bold" style="font-size:17px">Silent-payment receipt, step by step</text>
+
+  <!-- Alice -->
+  <circle cx="110" cy="136" r="9" class="glyph"/>
+  <path d="M90 170 a20 16 0 0 1 40 0" class="glyph"/>
+  <text x="110" y="196" text-anchor="middle" class="bold" style="font-size:14px">Alice</text>
+  <text x="110" y="213" text-anchor="middle" class="muted small">payer</text>
+
+  <!-- Shop -->
+  <path d="M771 146 L775 132 H805 L809 146 Z" class="glyph"/>
+  <rect x="775" y="146" width="30" height="20" class="glyph"/>
+  <rect x="786" y="154" width="8" height="12" class="glyph"/>
+  <text x="790" y="196" text-anchor="middle" class="bold" style="font-size:14px">Shop</text>
+  <text x="790" y="213" text-anchor="middle" class="muted small">receiver</text>
+
+  <!-- Marketplace / arbiter -->
+  <path d="M790 322 V356 M774 330 H806 M782 356 H798" class="glyph"/>
+  <path d="M768 342 L774 330 L780 342 Z M800 342 L806 330 L812 342 Z" class="glyph"/>
+  <text x="790" y="392" text-anchor="middle" class="bold" style="font-size:14px">Marketplace</text>
+  <text x="790" y="409" text-anchor="middle" class="muted small">or auditor, court</text>
+
+  <!-- The block with Alice's transaction -->
+  <rect x="280" y="86" width="290" height="148" rx="10" fill="var(--panel)" stroke="var(--line)"/>
+  <text x="296" y="110" class="bold">Bitcoin block</text>
+  <text x="554" y="110" text-anchor="end" class="mono muted small">tx 71ea…e756</text>
+  <rect x="292" y="126" width="266" height="40" rx="6" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="304" y="151" class="mono">out 0</text>
+  <text x="360" y="151" class="bold">0.30 BTC</text>
+  <text x="546" y="151" text-anchor="end" class="mono muted small">key a8d9…67c8</text>
+  <rect x="292" y="174" width="266" height="40" rx="6" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="304" y="199" class="mono">out 1</text>
+  <text x="360" y="199">0.1498 BTC</text>
+  <text x="546" y="199" text-anchor="end" class="muted small">change → Alice</text>
+  <rect x="292" y="126" width="266" height="40" rx="6" fill="none" stroke="var(--btc)" stroke-width="2.5" class="anim hl"/>
+  <rect x="292" y="126" width="266" height="40" rx="6" fill="none" stroke="var(--green)" stroke-width="2.5" class="anim p6"/>
+
+  <!-- Step 1: Alice pays -->
+  <g class="anim p1">
+    <line x1="146" y1="150" x2="272" y2="150" class="arrow" marker-end="url(#head)"/>
+    <text x="209" y="174" text-anchor="middle" class="muted small">pays 0.30 BTC</text>
+  </g>
+  <g class="anim coin">
+    <circle cx="148" cy="150" r="13" fill="var(--btc-fill)" stroke="var(--btc)" stroke-width="2"/>
+    <text x="148" y="155" text-anchor="middle" class="bold" style="fill:var(--btc);font-size:14px">₿</text>
+  </g>
+
+  <!-- Step 2: the output hides who was paid -->
+  <g class="anim p2">
+    <text x="425" y="258" text-anchor="middle" class="muted small">out 0 looks like any other taproot key.</text>
+    <text x="425" y="275" text-anchor="middle" class="muted small">Only the shop's wallet can recognise it.</text>
+  </g>
+
+  <!-- Step 3: the dispute -->
+  <g class="anim p3">
+    <rect x="598" y="62" width="166" height="40" rx="10" fill="var(--red-fill)" stroke="var(--red)"/>
+    <path d="M742 101 L758 101 L776 126 Z" fill="var(--red-fill)" stroke="var(--red)" stroke-linejoin="round"/>
+    <rect x="743" y="98" width="14" height="4" fill="var(--red-fill)"/>
+    <text x="681" y="87" text-anchor="middle" style="fill:var(--red);font-size:14px">“You never paid me.”</text>
+  </g>
+
+  <!-- Step 5: the marketplace fetches the transaction and rebuilds the key -->
+  <g class="anim p5">
+    <line x1="574" y1="222" x2="780" y2="316" class="arrow flow" marker-end="url(#head)"/>
+    <text x="675" y="258" text-anchor="middle" transform="rotate(24.5 675 258)" class="muted small">fetches tx from its own node</text>
+    <text x="425" y="306" text-anchor="middle" class="muted small">rebuilt from the chain + the share:</text>
+    <text x="425" y="333" text-anchor="middle" class="mono" style="font-size:14px">P₀ = B_m + hash(S ‖ 0)·G</text>
+  </g>
+  <g class="anim p6">
+    <text x="425" y="358" text-anchor="middle" class="mono bold" style="fill:var(--green);font-size:14px">= a8d9…67c8 → matches out 0 ✓</text>
+  </g>
+
+  <!-- Step 4: the receipt travels to the marketplace -->
+  <g class="anim rc">
+    <rect x="50" y="300" width="140" height="80" rx="8" fill="var(--blue-fill)" stroke="var(--blue)" stroke-width="1.5"/>
+    <text x="64" y="321" class="bold small" style="fill:var(--blue);letter-spacing:1px">RECEIPT</text>
+    <text x="64" y="340" class="bold">Order #1001</text>
+    <text x="64" y="358" class="mono small">share  33 B</text>
+    <text x="64" y="373" class="mono small">proof  64 B</text>
+  </g>
+  <g class="anim p6">
+    <rect x="600" y="300" width="140" height="80" rx="8" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+    <rect x="622" y="388" width="96" height="30" rx="6" fill="var(--green-fill)" stroke="var(--green)" stroke-width="2"/>
+    <text x="670" y="408" text-anchor="middle" class="bold" style="fill:var(--green);font-size:15px;letter-spacing:1px">VALID ✓</text>
+  </g>
+
+  <!-- Captions -->
+  <rect x="24" y="428" width="832" height="36" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+  <g style="font-size:14px">
+    <text x="440" y="451" text-anchor="middle" class="cap anim c1"><tspan class="muted">1/6 · </tspan>Alice pays 0.30 BTC to the shop's silent-payment address.</text>
+    <text x="440" y="451" text-anchor="middle" class="cap anim c2"><tspan class="muted">2/6 · </tspan>On chain, the shop's output is a random-looking key. Nobody else can tell who was paid.</text>
+    <text x="440" y="451" text-anchor="middle" class="cap anim c3"><tspan class="muted">3/6 · </tspan>The shop says it was never paid. Alice has nothing on chain she can point to.</text>
+    <text x="440" y="451" text-anchor="middle" class="cap anim c4"><tspan class="muted">4/6 · </tspan>Alice sends a receipt for Order #1001: a 33-byte share and a 64-byte proof. No private keys.</text>
+    <text x="440" y="451" text-anchor="middle" class="cap anim c5"><tspan class="muted">5/6 · </tspan>The marketplace fetches the tx itself, checks the proof and rebuilds the shop's output key.</text>
+    <text x="440" y="451" text-anchor="middle" class="cap anim c6"><tspan class="muted">6/6 · </tspan>The key matches output 0: VALID. 0.30 BTC was paid to the shop for Order #1001.</text>
+    <text x="440" y="451" text-anchor="middle" class="static-cap">Alice pays → the shop says it wasn't paid → Alice's receipt is checked against the chain → VALID</text>
+  </g>
+</svg>
