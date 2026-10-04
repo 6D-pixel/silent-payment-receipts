@@ -1,0 +1,19 @@
+{
+  "name": "spreceipt-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "copy-py": "node scripts/copy-py.mjs",
+    "dev": "npm run copy-py && vite",
+    "build": "npm run copy-py && tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4"
+  }
+}
