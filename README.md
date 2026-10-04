@@ -11,7 +11,28 @@ keys are shared, and the receiver does not have to cooperate.
 
 > **Prototype.** Pure-Python cryptography, not constant time. Do not use it with real money.
 
-## Two examples
+<p align="center">
+  <img src="docs/how-it-works.svg" width="880"
+       alt="Animated diagram: Alice pays 0.30 BTC to a shop's silent-payment address; on chain the output is a random-looking key; the shop says it was never paid; Alice sends a receipt for Order #1001 to a marketplace, which fetches the transaction from its own node, rebuilds the shop's output key and finds it matches output 0, so the receipt is valid.">
+</p>
+
+## Why it's useful
+
+Silent payments hide who was paid. That is good for privacy, but it also means the
+payer has nothing to point to when something goes wrong. Today the only option is to
+share the output tweak, and that check can be faked (see
+[below](#why-not-just-share-the-tweak)). A receipt fills the gap:
+
+* **Settles disputes.** A third party can check "you never paid me" against the chain.
+* **Proves one payment, not the whole wallet.** An auditor sees the payment they asked
+  about and nothing else.
+* **Needs nothing from the receiver,** and no private keys are shared.
+* **Cannot be reused.** It is tied to one transaction, one address and one memo
+  (an order or invoice id).
+* **Small and checkable by anyone** with a Bitcoin node or block explorer: a 33-byte
+  share and a 64-byte proof per payer.
+
+Two examples:
 
 * **"You never paid me."** Alice pays a shop 0.30 BTC for Order #1001. The shop says the
   money never came. Alice sends a receipt to the marketplace, which checks it and sees
@@ -72,9 +93,62 @@ The checker rebuilds everything else from the blockchain: the input keys, the
 shared secret, and the output address `P_k = B_m + hash(S || k)*G`. If that output is
 in the transaction, the payment is proven.
 
-**Why not just share the tweak?** A check of `P = B_m + t*G` can be faked: the sender
-can hide a taproot script path that lets them take the money back. The demo shows
-this fake passing the tweak check, and no receipt can be made for it.
+### Who does what
+
+```mermaid
+sequenceDiagram
+    actor Alice as Alice (payer)
+    participant Chain as Bitcoin
+    actor Shop as Shop (receiver)
+    actor Arbiter as Marketplace or auditor
+
+    Shop->>Alice: Labelled silent-payment address for Order #35;1001 (B_scan, B_m)
+    Alice->>Chain: Pay 0.30 BTC to P₀ = B_m + hash(S‖0)·G
+    Note over Chain: P₀ looks like any taproot key.<br/>Only the shop's wallet finds it.
+    Shop-->>Arbiter: "You never paid me"
+    Note over Alice: share C = a·B_scan (33 bytes)<br/>DLEQ proof (64 bytes) bound to<br/>txid + address + memo
+    Alice->>Arbiter: receipt.json
+    Arbiter->>Chain: Fetch the tx and the txs it spends
+    Note over Arbiter: Check the proof, then rebuild<br/>S = input_hash·C and P₀
+    Arbiter-->>Alice: VALID: output 0 paid 0.30 BTC for Order #35;1001
+```
+
+### What `verify` checks
+
+The receipt only supplies the claim (txid, address, memo), the shares and the proofs.
+Everything else comes from the transactions the verifier fetches itself
+([spreceipt/verify.py](spreceipt/verify.py)).
+
+```mermaid
+flowchart TD
+    R[receipt.json] --> F["Fetch the tx and every tx it spends<br/>(own node, Esplora, or the bundle)"]
+    F --> A["Address matches the network?<br/>A BIP-352 transaction?"]
+    A --> C["Shares cover every eligible input exactly once?"]
+    C --> D["DLEQ proof valid for m = hash(role, txid, address, memo)?"]
+    D --> P["Rebuilt P_k = B_m + hash(S‖k)·G is an output of the tx?"]
+    P --> K["At least --min-conf confirmations?"]
+    K -- all yes --> V["✅ VALID: these outputs and amounts were paid for this memo"]
+    A & C & D & P & K -. no .-> X["❌ INVALID, with the reason"]
+```
+
+A receiver proof adds one more check: each paid output needs a signature by its own
+output key, so a scanning server that only holds the scan key cannot fake one. With
+`--offline` the confirmation check is skipped and the result carries a warning.
+
+### Why not just share the tweak?
+
+A check of `P = B_m + t*G` can be faked: the sender can hide a taproot script path that
+lets them take the money back. The demo shows this fake passing the tweak check, and no
+receipt can be made for it.
+
+```mermaid
+flowchart LR
+    Q["Q = B_m + r·G<br/>(r chosen by the payer)"] --> P["P = Q + hash(Q ‖ script)·G<br/>script: the payer can spend"]
+    P --> T["Tweak check:<br/>P = B_m + t·G with t = r + hash(…)"]
+    T --> Pass["✅ passes: fooled"]
+    P --> Rc["Receipt check:<br/>needs t = hash(S‖k) for the real S"]
+    Rc --> Fail["❌ no receipt can be made"]
+```
 
 ## What is new, and what is not
 
@@ -116,5 +190,6 @@ disclosures (ZIP-311). The full rules are in [SPEC.md](SPEC.md).
 | `spreceipt/cli.py` | The `spreceipt` command |
 | `tests/` | BIP-352 and BIP-374 test vectors, attack tests |
 | `demo/regtest_demo.py` | End-to-end demo with Bitcoin Core |
+| `docs/how-it-works.svg` | The animated diagram at the top of this page |
 
 Vendored code and licences: [THIRD_PARTY.md](THIRD_PARTY.md).
