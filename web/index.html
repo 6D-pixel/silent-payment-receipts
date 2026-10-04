@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Silent Payment Receipts</title>
+  <meta name="description" content="Pay a Bitcoin silent-payment address, then prove the payment to someone else without sharing private keys.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="intro">
+        <h1>Pay privately.<br>Still prove it.</h1>
+        <p>Bitcoin silent payments hide who got paid. That protects privacy, but leaves the payer with nothing to show if the shop says the money never came. Here you pay a shop, then prove the payment to a third party without sharing any private keys.</p>
+      </div>
+      <div class="controls">
+        <details class="chain-chip">
+          <summary><span class="dot" aria-hidden="true"></span><span id="chain-label">Simulated chain</span></summary>
+          <p>Real, signed Bitcoin transactions and real proofs, run by the project's Python code in your browser. What's simulated: no network and no mining. A block is a counter, mined right after each payment.</p>
+        </details>
+        <label class="switch"><input type="checkbox" id="math-toggle"> Show the math</label>
+        <div class="buttons">
+          <button type="button" id="autoplay" class="ghost" disabled>Play the whole story</button>
+          <button type="button" id="reset" class="ghost" disabled>Start over</button>
+        </div>
+      </div>
+    </div>
+    <p id="loading" class="loading" role="status">Loading Python into your browser…</p>
+  </header>
+
+  <main>
+    <ol class="story">
+      <li class="step" id="step-invoice" data-state="active">
+        <div class="step-text">
+          <h2>The shop sends you an invoice</h2>
+          <p>Dana's Phone Shop gives every order its own payment address, so a payment to it can only be for that order.</p>
+          <button type="button" class="act" data-action="invoice" disabled>Create the invoice</button>
+        </div>
+        <div class="step-out" id="out-invoice"></div>
+      </li>
+
+      <li class="step" id="step-pay" data-state="locked">
+        <div class="step-text">
+          <h2>You pay it</h2>
+          <p>Your wallet sends the amount to the invoice address. A block is mined straight away, so the payment is confirmed.</p>
+          <button type="button" class="act" data-action="pay" disabled>Pay the invoice</button>
+        </div>
+        <div class="step-out" id="out-pay"></div>
+      </li>
+
+      <li class="step" id="step-chain" data-state="locked">
+        <div class="step-text">
+          <h2>What everyone else sees</h2>
+          <p>Anyone can read this transaction. Nothing in it says who was paid: the shop's output is a fresh, random-looking key.</p>
+          <button type="button" class="act" data-action="dispute" disabled>Play the dispute</button>
+        </div>
+        <div class="step-out" id="out-chain"></div>
+      </li>
+
+      <li class="step" id="step-receipt" data-state="locked">
+        <div class="step-text">
+          <h2>You make a receipt</h2>
+          <p>Your wallet proves that the coins it spent paid this address, for this order only. The proof is 97 bytes and contains no private keys.</p>
+          <button type="button" class="act" data-action="receipt" disabled>Create the receipt</button>
+        </div>
+        <div class="step-out" id="out-receipt"></div>
+      </li>
+
+      <li class="step" id="step-verify" data-state="locked">
+        <div class="step-text">
+          <h2>A marketplace checks it</h2>
+          <p>The marketplace fetches the transaction from the chain itself and checks the receipt against it. It trusts nothing else in the file.</p>
+          <button type="button" class="act" data-action="verify" disabled>Check the receipt</button>
+          <label class="file-pick">Or check a receipt.json file <input type="file" id="receipt-file" accept="application/json,.json" disabled></label>
+        </div>
+        <div class="step-out" id="out-verify"></div>
+      </li>
+
+      <li class="step" id="step-cheat" data-state="locked">
+        <div class="step-text">
+          <h2>Now try to cheat</h2>
+          <p>Each attempt goes through the same check the marketplace just ran.</p>
+        </div>
+        <div class="cheats">
+          <article class="cheat" id="cheat-reuse">
+            <h3>Use it for another order</h3>
+            <p>Change the order in your receipt to Order #2002 and claim this payment again.</p>
+            <button type="button" class="act" data-action="cheat-reuse" disabled>Try it</button>
+            <div class="cheat-out"></div>
+          </article>
+          <article class="cheat" id="cheat-tamper">
+            <h3>Edit the proof</h3>
+            <p>Change one character of the 64-byte proof.</p>
+            <button type="button" class="act" data-action="cheat-tamper" disabled>Try it</button>
+            <div class="cheat-out"></div>
+          </article>
+          <article class="cheat" id="cheat-backdoor">
+            <h3>Pay with a hidden way back</h3>
+            <p>Pay 0.10 BTC to a key built so the usual "share the tweak" check passes, while you keep a way to take the money back.</p>
+            <button type="button" class="act" data-action="cheat-backdoor" disabled>Try it</button>
+            <div class="cheat-out"></div>
+          </article>
+        </div>
+      </li>
+    </ol>
+
+    <section class="more" aria-labelledby="more-title">
+      <h2 id="more-title">More to try</h2>
+      <div class="more-grid">
+        <article>
+          <h3>The shop proves it was paid</h3>
+          <p>The other direction: the shop shows its accountant that the output is its income, with a proof signed by the output's own key.</p>
+          <button type="button" class="act" data-action="income" disabled>Prove the income</button>
+          <div class="more-out" id="out-income"></div>
+        </article>
+        <article>
+          <h3>A receipt from a real Bitcoin Core node</h3>
+          <p>This receipt was made on a Bitcoin Core regtest chain. It carries its transactions, so the same check runs on Core-built bytes.</p>
+          <button type="button" class="act" data-action="sample" disabled>Check the saved receipt</button>
+          <div class="more-out" id="out-sample"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>A prototype: pure-Python cryptography, not for real money. The receipt format is a draft, not a BIP. <a href="https://github.com/6D-pixel/silent-payment-receipts">Source and spec on GitHub</a>.</p>
+  </footer>
+  <div id="announce" class="visually-hidden" aria-live="polite"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

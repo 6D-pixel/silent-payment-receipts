@@ -47,7 +47,7 @@ The receiver can also prove the other way round: "this output is my income".
 Python 3.10+ and no packages to install.
 
 ```sh
-python3 -m unittest discover -s tests -t .      # 23 tests: BIP-352 + BIP-374 vectors, attacks (~20 s)
+python3 -m unittest discover -s tests -t .      # 36 tests: BIP-352 + BIP-374 vectors, attacks, web demo (~20 s)
 SPRECEIPT_SLOW=1 python3 -m unittest tests.test_bip352_vectors   # adds the 2,323-output K_max case (~3 min)
 
 BITCOIND=/path/to/bitcoind python3 demo/regtest_demo.py   # full story on a private regtest chain
@@ -56,6 +56,22 @@ BITCOIND=/path/to/bitcoind python3 demo/regtest_demo.py   # full story on a priv
 The demo starts a throwaway regtest node, pays a shop with a real silent payment, makes
 and checks a receipt, and shows two cheats failing. [demo/samples/](demo/samples/) has
 the receipts it produced.
+
+### In the browser
+
+[web/](web/) is a page where you play the whole story: the shop sends an invoice, you pay
+it, you make a receipt, a marketplace checks it, and you try to cheat. It runs this
+project's Python code in the browser with [Pyodide](https://pyodide.org), on a small
+simulated chain ([webdemo/](webdemo/)). The transactions are real and signed (Bitcoin Core
+accepts the same signing code) and the receipts are the real ones; only the network and
+mining are simulated. Needs Node 20.19+ or 22.12+.
+
+```sh
+cd web && npm install && npm run dev      # then open the printed localhost URL
+npm run build                             # static site in web/dist/
+```
+
+Add `?autoplay` to the URL to play the story without clicking.
 
 ## Commands
 
@@ -190,6 +206,8 @@ disclosures (ZIP-311). The full rules are in [SPEC.md](SPEC.md).
 | `spreceipt/cli.py` | The `spreceipt` command |
 | `tests/` | BIP-352 and BIP-374 test vectors, attack tests |
 | `demo/regtest_demo.py` | End-to-end demo with Bitcoin Core |
+| `webdemo/` | Simulated chain and the shop / payer / verifier story for the browser demo |
+| `web/` | The browser demo (TypeScript + Vite, Python via Pyodide) |
 | `docs/how-it-works.svg` | The animated diagram at the top of this page |
 
 Vendored code and licences: [THIRD_PARTY.md](THIRD_PARTY.md).
