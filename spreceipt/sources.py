@@ -29,6 +29,9 @@ class BundleSource:
     def confirmations(self, txid: str) -> int | None:
         return None
 
+    def block_height(self, txid: str) -> int | None:
+        return None
+
 
 class CoreRPCSource:
     """Your own Bitcoin Core node (needs -txindex, or the transactions in its wallet)."""
@@ -61,6 +64,10 @@ class CoreRPCSource:
     def confirmations(self, txid: str) -> int | None:
         return self.call("getrawtransaction", txid, True).get("confirmations", 0)
 
+    def block_height(self, txid: str) -> int | None:
+        blockhash = self.call("getrawtransaction", txid, True).get("blockhash")
+        return self.call("getblockheader", blockhash)["height"] if blockhash else None
+
 
 class EsploraSource:
     """An Esplora HTTP API, e.g. your own electrs/esplora or a public one."""
@@ -84,6 +91,10 @@ class EsploraSource:
             return 0
         tip = int(self._get("/blocks/tip/height"))
         return tip - status["block_height"] + 1
+
+    def block_height(self, txid: str) -> int | None:
+        status = json.loads(self._get(f"/tx/{txid}/status"))
+        return status["block_height"] if status.get("confirmed") else None
 
 
 def resolve(source, txid: str) -> tuple[Tx, list[bytes], int | None]:
