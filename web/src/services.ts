@@ -32,7 +32,6 @@ export async function api<T>(base: string, path: string, body?: object): Promise
   return JSON.parse(text) as T;
 }
 
-export const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 export const sat = (n: number) => `${n.toLocaleString("en-US")} sat`;
 export const short = (s: string, n = 10) => (s.length > 2 * n + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s);
 export const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -51,26 +50,42 @@ export function stamp(tone: boolean | "wait", word: string, reason: string, extr
     el("p", { class: "stamp" }, word), el("p", {}, reason), extra ? el("p", { class: "small muted" }, extra) : null);
 }
 
-export function showError(text: string | null): void {
-  const box = $("#offline");
-  box.hidden = !text;
-  box.textContent = text ?? "";
-}
+/** One section of the page. Its ids are prefixed with its name ("pay-to"); $("#to") finds them. */
+export function makeView(name: string) {
+  const root = document.getElementById(`view-${name}`)!;
+  const $ = <T extends HTMLElement = HTMLElement>(sel: string) =>
+    root.querySelector(sel.replace(/#([\w-]+)/g, `#${name}-$1`)) as T;
 
-/** Run a button's work with the busy look, and show any failure at the top of the page. */
-export async function busy(button: HTMLButtonElement, work: () => Promise<void>, after: () => void): Promise<void> {
-  button.disabled = true;
-  button.setAttribute("aria-busy", "true");
-  try {
-    await work();
-    showError(null);
-  } catch (e) {
-    showError(message(e));
-  } finally {
-    button.removeAttribute("aria-busy");
-    button.disabled = false;
-    after();
+  function showError(text: string | null): void {
+    const box = $("#offline");
+    box.hidden = !text;
+    box.textContent = text ?? "";
   }
+
+  /** Run a button's work with the busy look, and show any failure at the top of the section. */
+  async function busy(button: HTMLButtonElement, work: () => Promise<void>, after: () => void): Promise<void> {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    try {
+      await work();
+      showError(null);
+    } catch (e) {
+      showError(message(e));
+    } finally {
+      button.removeAttribute("aria-busy");
+      button.disabled = false;
+      after();
+    }
+  }
+
+  async function showTip(): Promise<void> {
+    try {
+      const t = await fetch(`${API.chain}/blocks/tip/height`);
+      if (t.ok) $("#tip").textContent = `Public signet: block ${Number(await t.text()).toLocaleString("en-US")}`;
+    } catch { /* the tip is only shown */ }
+  }
+
+  return { root, $, showError, busy, showTip };
 }
 
 export function txLine(t: TxStatus | null): { s: string; text: string } {
@@ -87,11 +102,4 @@ export function download(name: string, data: object): void {
   const a = el("a", { href: url, download: name }) as HTMLAnchorElement;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-export async function showTip(): Promise<void> {
-  try {
-    const t = await fetch(`${API.chain}/blocks/tip/height`);
-    if (t.ok) $("#tip").textContent = `Public signet: block ${Number(await t.text()).toLocaleString("en-US")}`;
-  } catch { /* the tip is only shown */ }
 }

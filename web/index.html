@@ -9,12 +9,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Lilita+One&family=Luckiest+Guy&family=Patrick+Hand&display=swap">
   <link rel="stylesheet" href="/src/style.css">
+  <link rel="stylesheet" href="/src/live.css">
 </head>
 <body>
   <!-- The cast. Every character is a bust drawn from the same few shapes: round head, ink outline, flat spot colour. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
-      <clipPath id="c-ref-body"><path d="M8 130C8 100 28 88 60 88s52 12 52 42z"/></clipPath>
 
       <symbol id="c-you" viewBox="0 0 120 130">
         <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
@@ -51,23 +51,20 @@
 
       <symbol id="c-ref" viewBox="0 0 120 130">
         <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-          <g clip-path="url(#c-ref-body)" stroke="none">
-            <rect x="0" y="80" width="120" height="50" fill="#fff"/>
-            <rect x="14" y="80" width="12" height="50" fill="#1d9a63"/>
-            <rect x="38" y="80" width="12" height="50" fill="#1d9a63"/>
-            <rect x="62" y="80" width="12" height="50" fill="#1d9a63"/>
-            <rect x="86" y="80" width="12" height="50" fill="#1d9a63"/>
-          </g>
-          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="none"/>
+          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="#3d4259"/>
+          <path d="M45 89L60 128 75 89Q60 95 45 89z" fill="#fff"/>
+          <path d="M55 93h10l-2 6h-6z" fill="#1d9a63" stroke-width="3"/>
+          <path d="M57 99h6l4 17-7 9-7-9z" fill="#1d9a63" stroke-width="3"/>
+          <path d="M44 90l6 12-5 3 15 23M76 90l-6 12 5 3-15 23" fill="#4d5468"/>
+          <path d="M84 108l11-2 1 5z" fill="#fff" stroke-width="2.5"/>
           <rect x="51" y="74" width="18" height="18" rx="6" fill="#fff1d6"/>
-          <circle cx="60" cy="52" r="27" fill="#fff1d6"/>
-          <path d="M31 42C30 22 44 14 60 14s30 8 29 28z" fill="#15172b"/>
-          <path d="M24 42h72q0 9-12 9H36q-12 0-12-9z" fill="#15172b"/>
-          <path d="M44 55l9 3M76 55l-9 3" fill="none"/>
-          <circle cx="49" cy="63" r="3" fill="#15172b" stroke="none"/>
-          <circle cx="71" cy="63" r="3" fill="#15172b" stroke="none"/>
-          <circle cx="60" cy="75" r="4" fill="#ffd23c" stroke-width="3"/>
-          <path d="M64 75l22 8" fill="none" stroke-width="3"/>
+          <circle cx="60" cy="50" r="27" fill="#fff1d6"/>
+          <path d="M33 50C29 27 43 17 61 17c18 0 30 11 26 33-3-9-7-14-12-16-13 2-28 5-42 16z" fill="#4d5468"/>
+          <path d="M70 21q-8 6-10 14" fill="none" stroke-width="2.5"/>
+          <path d="M43 50q6-3 12 0M65 50q6-3 12 0" fill="none" stroke-width="3"/>
+          <circle cx="49" cy="57" r="3" fill="#15172b" stroke="none"/>
+          <circle cx="71" cy="57" r="3" fill="#15172b" stroke="none"/>
+          <path d="M51 67q9 7 18 0" fill="none"/>
         </g>
       </symbol>
 
@@ -96,6 +93,16 @@
       </symbol>
     </defs>
   </svg>
+  <nav class="tabs" aria-label="Sections">
+    <div class="tabs-inner">
+      <a class="tabs-brand" href="#">Silent Payment Receipts</a>
+      <a href="#" data-view="comic">The story</a>
+      <a href="#live" data-view="live">Live order</a>
+      <a href="#pay" data-view="pay">Pay a shop</a>
+      <a href="#shop" data-view="shop">Shop</a>
+    </div>
+  </nav>
+  <section class="view" id="view-comic">
 
   <header class="top">
     <div class="top-inner">
@@ -386,11 +393,211 @@
       </div>
     </section>
   </main>
+  </section>
+  <section class="view" id="view-live" hidden>
+
+  <header class="top">
+    <div class="top-inner">
+      <div class="intro">
+        <h1>Now for real.<br>On signet.</h1>
+        <p>Same story, real network: public Bitcoin signet. You pay Dana's one shop address from a demo wallet that is already signed in. The payment waits in the mempool until a block comes, about every 10 minutes. Then Dana says she was never paid, and the marketplace checks your receipt.</p>
+      </div>
+      <ul class="cast" aria-label="The characters">
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg><span class="cast-name">You</span><span class="cast-role">the buyer</span></li>
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg><span class="cast-name">Dana</span><span class="cast-role">the phone shop</span></li>
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg><span class="cast-name">Marketplace</span><span class="cast-role">checks the receipt</span></li>
+      </ul>
+    </div>
+    <div class="controls">
+      <p class="chain-chip live-chip"><span class="dot" aria-hidden="true"></span><span id="live-tip">Public signet</span></p>
+            <div class="buttons">
+        <button type="button" id="live-restart" class="ghost">Start a new order</button>
+      </div>
+    </div>
+    <p id="live-offline" class="error offline" role="alert" hidden></p>
+  </header>
+
+  <main>
+    <ol class="track" aria-label="Where the order is">
+      <li data-stage="order">Order placed</li>
+      <li data-stage="mempool">In the mempool</li>
+      <li data-stage="block">In a block</li>
+      <li data-stage="dispute">Dana disputes</li>
+      <li data-stage="ruling">Ruling</li>
+    </ol>
+
+    <div class="desk">
+      <section class="desk-panel" data-tint="blue" id="live-buyer" aria-labelledby="live-buyer-h">
+        <h2 id="live-buyer-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg>Your wallet</h2>
+        <div class="desk-body">
+          <dl class="facts">
+            <dt>Balance</dt><dd id="live-w-balance">…</dd>
+            <dt>Address</dt><dd><code id="live-w-address">…</code></dd>
+          </dl>
+          <p class="empty-wallet" id="live-w-empty" hidden>The demo wallet is empty. Send it some signet coins from a faucet, then reload.</p>
+          <button type="button" class="act" id="live-buy" disabled>Buy the phone for 30,000 sat</button>
+          <button type="button" class="act" id="live-pay" hidden disabled>Pay from the demo wallet</button>
+          <div id="live-paid" hidden>
+            <p class="note">Paid. Your wallet made a receipt and gave it to the marketplace.</p>
+            <dl class="facts">
+              <dt>Transaction</dt><dd><a id="live-tx-link" target="_blank" rel="noopener"><code id="live-txid"></code></a></dd>
+            </dl>
+            <button type="button" class="ghost" id="live-download">Download the receipt</button>
+            <details class="raw"><summary>Show the receipt</summary><pre id="live-receipt-json"></pre></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="desk-panel" data-tint="yellow" id="live-shop" aria-labelledby="live-shop-h">
+        <h2 id="live-shop-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Dana's payment page</h2>
+        <div class="desk-body">
+          <p class="state" id="live-shop-state" data-s="none">No order yet</p>
+          <dl class="facts" id="live-invoice" hidden>
+            <dt>Pay to</dt><dd><code id="live-i-address"></code></dd>
+            <dt>Amount</dt><dd id="live-i-amount"></dd>
+            <dt>Memo</dt><dd><code id="live-i-memo"></code></dd>
+            <dt>Shop's check</dt><dd id="live-i-check">Waiting for the receipt</dd>
+          </dl>
+          <a id="live-pay-page" class="small" target="_blank" rel="noopener" hidden>Open Dana's pay page</a>
+          <button type="button" class="act dispute" id="live-dispute" disabled>Say “I was never paid”</button>
+        </div>
+      </section>
+
+      <section class="desk-panel" data-tint="green" id="live-market" aria-labelledby="live-market-h">
+        <h2 id="live-market-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg>Marketplace</h2>
+        <div class="desk-body">
+          <p class="state" id="live-m-payment" data-s="none">Waiting for an order</p>
+          <p class="small muted" id="live-m-wait" hidden></p>
+          <div id="live-ruling" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="cheat-live" aria-labelledby="live-cheat-h">
+      <h2 id="live-cheat-h">Try to cheat</h2>
+      <div class="cheat-live-body">
+        <p>Sign a second receipt for the same payment, naming a new order. A receipt can't stop you writing another order on it, but the marketplace accepts each payment for one order only.</p>
+        <button type="button" class="act" id="live-cheat" disabled>Reuse the payment for a second order</button>
+        <div id="live-cheat-out" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+  </section>
+  <section class="view" id="view-pay" hidden>
+
+  <header class="top top-slim">
+    <div class="intro">
+      <h1>Pay a shop.</h1>
+      <p>This is the buyer's side. Paste a shop's link or its silent-payment address and pay from the demo wallet, which is already signed in. You get a receipt that proves the payment, and the marketplace checks it for you.</p>
+    </div>
+    <div class="controls">
+      <p class="chain-chip live-chip"><span class="dot" aria-hidden="true"></span><span id="pay-tip">Public signet</span></p>
+          </div>
+    <p id="pay-offline" class="error offline" role="alert" hidden></p>
+  </header>
+
+  <main>
+    <div class="desk desk-two">
+      <section class="desk-panel" data-tint="blue" id="pay-buyer" aria-labelledby="pay-pay-h">
+        <h2 id="pay-pay-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg>Pay</h2>
+        <form class="desk-body" id="pay-pay-form" novalidate>
+          <dl class="facts">
+            <dt>Wallet</dt><dd>Demo wallet, signed in</dd>
+            <dt>Balance</dt><dd id="pay-w-balance">…</dd>
+          </dl>
+          <p class="empty-wallet" id="pay-w-empty" hidden>The demo wallet is empty. Send it some signet coins from a faucet, then reload.</p>
+          <div class="field">
+            <label for="pay-to">Shop link or silent-payment address</label>
+            <div class="field-row">
+              <input id="pay-to" name="to" type="text" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:8401 or tsp1…">
+              <button type="button" class="ghost" id="pay-lookup">Look up</button>
+            </div>
+            <button type="button" class="linkish" id="pay-use-dana">Use Dana's shop</button>
+          </div>
+          <div class="payee" id="pay-payee" hidden></div>
+          <div class="field">
+            <label for="pay-amount">Amount in sat</label>
+            <input id="pay-amount" name="amount" type="number" inputmode="numeric" min="330" step="1" value="30000">
+          </div>
+          <div class="field">
+            <label for="pay-memo">What it's for</label>
+            <input id="pay-memo" name="memo" type="text" maxlength="200" value="Phone, order 1001">
+            <p class="hint">This goes into the receipt. Name the order, so the receipt can't be used for anything else.</p>
+          </div>
+          <button type="submit" class="act" id="pay-pay" disabled>Pay</button>
+        </form>
+      </section>
+
+      <section class="desk-panel" data-tint="green" id="pay-market" aria-labelledby="pay-receipt-h">
+        <h2 id="pay-receipt-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg>Your receipt</h2>
+        <div class="desk-body">
+          <p class="state" id="pay-tx-state" data-s="none">Nothing paid yet</p>
+          <div id="pay-paid" hidden>
+            <dl class="facts">
+              <dt>Paid</dt><dd id="pay-r-amount"></dd>
+              <dt>To</dt><dd id="pay-r-to"></dd>
+              <dt>For</dt><dd id="pay-r-memo"></dd>
+              <dt>Transaction</dt><dd><a id="pay-tx-link" target="_blank" rel="noopener"><code id="pay-txid"></code></a></dd>
+              <dt>Shop told</dt><dd id="pay-r-shop"></dd>
+            </dl>
+          </div>
+          <div class="row" id="pay-receipt-actions" hidden>
+            <button type="button" class="act" id="pay-check">Ask the marketplace to check it</button>
+            <button type="button" class="ghost" id="pay-download">Download the receipt</button>
+          </div>
+          <div id="pay-verdict" aria-live="polite"></div>
+          <details class="raw" id="pay-raw" hidden><summary>Show the receipt</summary><pre id="pay-receipt-json"></pre></details>
+        </div>
+      </section>
+    </div>
+  </main>
+  </section>
+  <section class="view" id="view-shop" hidden>
+
+  <header class="top top-slim">
+    <div class="intro">
+      <h1>Dana's shop.</h1>
+      <p>This is the shop's side. Dana shows one silent-payment address everywhere. Her payment software holds only the keys that find payments, not the one that spends them, and lists what it found with the receipts buyers sent.</p>
+    </div>
+    <div class="controls">
+      <p class="chain-chip live-chip"><span class="dot" aria-hidden="true"></span><span id="shop-tip">Public signet</span></p>
+          </div>
+    <p id="shop-offline" class="error offline" role="alert" hidden></p>
+  </header>
+
+  <main>
+    <div class="desk desk-two">
+      <section class="desk-panel" data-tint="yellow" id="shop-shop" aria-labelledby="shop-key-h">
+        <h2 id="shop-key-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Shop key</h2>
+        <div class="desk-body">
+          <p class="note">Demo key loaded.</p>
+          <p class="small muted">For this demo the shop uses one built-in key. A real shop brings its own: this software needs the scan key and the public spend key, and the spend key stays in Dana's wallet.</p>
+          <dl class="facts">
+            <dt>Shop</dt><dd id="shop-s-name">…</dd>
+            <dt>Network</dt><dd id="shop-s-network">…</dd>
+            <dt>Address</dt><dd><code id="shop-s-address">…</code> <button type="button" class="copy" data-copy="address">Copy</button></dd>
+            <dt>Shop link</dt><dd><code id="shop-s-link"></code> <button type="button" class="copy" data-copy="link">Copy</button></dd>
+          </dl>
+          <div class="qr-tile" id="shop-s-qr" role="img" aria-label="QR code of the shop's address"></div>
+        </div>
+      </section>
+
+      <section class="desk-panel" data-tint="green" id="shop-market" aria-labelledby="shop-pays-h">
+        <h2 id="shop-pays-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Payments received</h2>
+        <div class="desk-body">
+          <p class="small muted" id="shop-p-scan">…</p>
+          <ul class="payments" id="shop-payments"></ul>
+          <p class="state" id="shop-p-empty" data-s="none">No payments yet. Pay Dana from the <a href="#pay">Pay a shop</a> page.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  </section>
 
   <footer>
-    <p>A prototype: pure-Python cryptography, not for real money. The receipt format is a draft, not a BIP. <a href="https://github.com/6D-pixel/silent-payment-receipts">Source and spec on GitHub</a>.</p>
+    <p>A prototype: pure-Python cryptography, not for real money. The receipt format is a draft, not a BIP. The signet pages use coins with no value and talk to the demo services. <a href="https://github.com/6D-pixel/silent-payment-receipts">Source and spec on GitHub</a>.</p>
   </footer>
   <div id="announce" class="visually-hidden" aria-live="polite"></div>
-  <script type="module" src="/src/main.ts"></script>
+  <script type="module" src="/src/app.ts"></script>
 </body>
 </html>

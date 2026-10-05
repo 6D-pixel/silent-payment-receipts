@@ -355,8 +355,8 @@ function reset() {
   invoice = payment = null;
   receipt = null;
   refreshChain();
-  document.querySelectorAll(".step-out, .cheat-out, .more-out").forEach((el) => el.replaceChildren());
-  document.querySelectorAll<HTMLButtonElement>("button.act").forEach((b) => (b.dataset.once = ""));
+  $("#view-comic").querySelectorAll(".step-out, .cheat-out, .more-out").forEach((el) => el.replaceChildren());
+  $("#view-comic").querySelectorAll<HTMLButtonElement>("button.act").forEach((b) => (b.dataset.once = ""));
   STEPS.forEach((s, i) => setStep(s, i === 0 ? "active" : "locked"));
   $<HTMLButtonElement>("[data-action=pay]").textContent = "Pay the invoice";
   $("#more-title").closest("section")!.querySelectorAll<HTMLButtonElement>("button.act")
