@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from spreceipt import Receipt, ReceiptFormatError, verify_receipt
 from spreceipt.bip352 import decode_sp_address
-from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment
+from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment, check_receipt
 from spreceipt.sources import SourceError, resolve
 
 from ..sppay.scanner import sign_body
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS claims (
     txid TEXT NOT NULL,
     vout INTEGER NOT NULL,
-    order_id TEXT NOT NULL REFERENCES orders(id),
+    claimed_by TEXT NOT NULL,     -- an order id, or "memo:<memo>" for a payment checked without an order
     PRIMARY KEY (txid, vout)
 );
 """
@@ -142,25 +142,28 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
         except SourceError as e:
             return Verdict(False, "tx_not_found", f"could not fetch the transaction: {e}")
         # The first valid receipt for a payment claims it, even before it confirms.
-        taken = claim(o, receipt, tx, spks)
+        taken = claim(o["id"], receipt, tx, spks)
         if taken:
-            return Verdict(False, "outpoint_taken", f"this payment was already claimed for order {taken}")
+            return Verdict(False, "outpoint_taken", f"this payment was already claimed for {describe(taken)}")
         return check_payment(receipt, tx, spks, OrderTerms(**o["terms"]), ChainStatus(confs, height),
                              min_conf=cfg.min_conf)
 
-    def claim(o: dict, receipt: Receipt, tx, spks) -> str | None:
-        """Reserve the outputs this receipt proves paid the shop. Returns the other order if one has them."""
+    def describe(owner: str) -> str:
+        return f"the receipt for {owner[5:]!r}" if owner.startswith("memo:") else f"order {owner}"
+
+    def claim(owner: str, receipt: Receipt, tx, spks) -> str | None:
+        """Reserve the outputs this receipt proves paid the shop. Returns who has them, if someone else does."""
         result = verify_receipt(replace(receipt, network=cfg.network), tx, spks)
         if not result.valid:
             return None  # check_payment will say why
         outpoints = [(tx.txid_hex, p["vout"]) for p in result.paid_outputs]
         with lock:
             for txid, vout in outpoints:
-                row = db.execute("SELECT order_id FROM claims WHERE txid=? AND vout=?", (txid, vout)).fetchone()
-                if row and row["order_id"] != o["id"]:
-                    return row["order_id"]
+                row = db.execute("SELECT claimed_by FROM claims WHERE txid=? AND vout=?", (txid, vout)).fetchone()
+                if row and row["claimed_by"] != owner:
+                    return row["claimed_by"]
             for txid, vout in outpoints:
-                db.execute("INSERT OR IGNORE INTO claims VALUES (?,?,?)", (txid, vout, o["id"]))
+                db.execute("INSERT OR IGNORE INTO claims VALUES (?,?,?)", (txid, vout, owner))
         return None
 
     def save_verdict(o: dict, v: Verdict) -> dict:
@@ -170,7 +173,7 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
 
     @app.get("/api/shops")
     def list_shops():
-        return [{"id": s.id, "name": s.name, "address": s.address} for s in cfg.shops]
+        return [{"id": s.id, "name": s.name, "address": s.address, "url": s.sppay_url} for s in cfg.shops]
 
     @app.post("/api/orders", status_code=201)
     def new_order(req: NewOrder):
@@ -223,6 +226,32 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
             shop_check = {"ok": False, "code": "shop_unreachable", "reason": e.detail}
         db.execute("UPDATE orders SET shop_check=? WHERE id=?", (json.dumps(shop_check), order_id))
         return {"order": view(load(order_id)), "verdict": verdict}
+
+    @app.post("/api/check")
+    def check(req: SubmitReceipt):
+        """Check any receipt. One for an order here goes to that order; otherwise it must pay a listed shop."""
+        try:
+            receipt = Receipt.from_dict(req.receipt)
+        except ReceiptFormatError as e:
+            raise HTTPException(422, f"not a receipt: {e}")
+        prefix = f"spr1:{cfg.marketplace_id}:"
+        if receipt.memo.startswith(prefix) and db.execute(
+                "SELECT 1 FROM orders WHERE id=?", (receipt.memo[len(prefix):],)).fetchone():
+            return {"kind": "order"} | submit_receipt(receipt.memo[len(prefix):], req)
+        shop = next((s for s in cfg.shops if same_keys(s.address, receipt.address)), None)
+        if shop is None:
+            v = Verdict(False, "unknown_shop", "the receipt pays an address that no shop here has listed")
+            return {"kind": "direct", "shop": None, "verdict": asdict(v)}
+        try:
+            tx, spks, confs = resolve(chain, receipt.txid)
+            height = chain.block_height(receipt.txid)
+        except SourceError as e:
+            v = Verdict(False, "tx_not_found", f"could not fetch the transaction: {e}")
+            return {"kind": "direct", "shop": shop.name, "verdict": asdict(v)}
+        taken = claim(f"memo:{receipt.memo}", receipt, tx, spks)
+        v = (Verdict(False, "outpoint_taken", f"this payment was already claimed for {describe(taken)}") if taken
+             else check_receipt(receipt, tx, spks, shop.address, cfg.network, ChainStatus(confs, height), cfg.min_conf))
+        return {"kind": "direct", "shop": shop.name, "verdict": asdict(v)}
 
     @app.post("/api/orders/{order_id}/dispute")
     def dispute(order_id: str):

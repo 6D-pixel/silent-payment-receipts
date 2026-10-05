@@ -19,6 +19,14 @@ for the same payment, so:
 - the marketplace passes the buyer's receipt to the shop, which checks it on its own;
 - the payment must confirm after the order was made, so an old payment can't be reused.
 
+## Pages
+
+| Page | Who | What |
+|---|---|---|
+| `web/wallet.html` | the buyer | Paste a shop link (`http://127.0.0.1:8401`), an invoice link (`…/pay/<id>`) or a silent-payment address; pay from the demo wallet; get the receipt; the page tells the shop and asks the marketplace (`POST /api/check`) to check it |
+| `web/shop.html` | Dana's shop | Its one address with the demo key, and the payments its scanner found with the receipts buyers sent |
+| `web/live.html` | a judge | One marketplace order end to end, with a dispute and a cheat |
+
 ## Run on public signet
 
 ```sh
@@ -28,7 +36,7 @@ for the same payment, so:
 .venv/bin/python -m services.market     # in a second terminal
 
 .venv/bin/python -m services.wallet     # in a third terminal: the demo buyer's wallet
-(cd web && npm run dev)                 # then open http://localhost:5173/live.html
+(cd web && npm run dev)                 # then open http://localhost:5173/wallet.html
 
 .venv/bin/python -m services.buyer address        # fund this address from a signet faucet
 .venv/bin/python -m services.buyer balance

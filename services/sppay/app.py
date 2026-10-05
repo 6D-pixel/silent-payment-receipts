@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from dataclasses import asdict
 
 from spreceipt import Receipt, ReceiptFormatError
-from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment
+from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment, check_receipt
 from spreceipt.sources import SourceError, resolve
 
 from .config import Config
@@ -42,6 +42,11 @@ class PaidWith(BaseModel):
 
 class ReceiptIn(BaseModel):
     receipt: dict
+
+
+class DirectPayment(BaseModel):
+    txid: str = Field(pattern=r"^[0-9a-f]{64}$")
+    receipt: dict | None = None
 
 
 def public(inv: dict, cfg: Config) -> dict:
@@ -99,7 +104,7 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
     def invoice(inv_id: str):
         inv = get(inv_id)
         if inv["receipt"] and inv["receipt_check"]["code"] in ("unconfirmed", "tx_not_found"):
-            inv = check_receipt(inv, inv["receipt"])  # it may have confirmed since
+            inv = check_invoice_receipt(inv, inv["receipt"])  # it may have confirmed since
         return public(inv, cfg)
 
     @app.post("/api/invoices/{inv_id}/tx")
@@ -114,7 +119,7 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
             raise HTTPException(422, "this transaction does not pay this invoice (wrong amount, or it already paid another one)")
         return public(found, cfg)
 
-    def check_receipt(inv: dict, receipt: dict) -> dict:
+    def check_invoice_receipt(inv: dict, receipt: dict) -> dict:
         """The shop's own check of a receipt, against its own view of the chain."""
         r = Receipt.from_dict(receipt)
         try:
@@ -135,7 +140,48 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
             Receipt.from_dict(req.receipt)
         except ReceiptFormatError as e:
             raise HTTPException(422, f"not a receipt: {e}")
-        return public(check_receipt(inv, req.receipt), cfg)
+        return public(check_invoice_receipt(inv, req.receipt), cfg)
+
+    @app.get("/api/payments")
+    def payments():
+        """Everything the scanner found for the shop. Demo only: a real shop would put this behind a login."""
+        rows = store.payments()
+        stale = {p["txid"] for p in rows if p["receipt"] and p["block_height"] is not None
+                 and p["receipt_check"]["code"] == "unconfirmed"}
+        for txid in stale:  # confirmed since the receipt came in: check it again
+            receipt = next(p["receipt"] for p in rows if p["txid"] == txid)
+            store.save_payment_receipt(txid, receipt, direct_check(receipt))
+        return store.payments() if stale else rows
+
+    def direct_check(receipt: dict) -> dict:
+        r = Receipt.from_dict(receipt)
+        try:
+            tx, spks, confs = resolve(chain, r.txid)
+            v = check_receipt(r, tx, spks, cfg.address, cfg.network, ChainStatus(confs, chain.block_height(r.txid)))
+        except SourceError as e:
+            v = Verdict(False, "tx_not_found", f"could not fetch the transaction: {e}")
+        return asdict(v)
+
+    @app.post("/api/payments/report")
+    def report(req: DirectPayment):
+        """The payer paid the shop's address directly (no invoice) and says so, maybe with its receipt."""
+        try:
+            found = scanner.check_direct(req.txid)
+        except SourceError as e:
+            raise HTTPException(404, f"transaction not found: {e}")
+        if not found:
+            raise HTTPException(422, "this transaction does not pay the shop")
+        check = None
+        if req.receipt is not None:
+            try:
+                r = Receipt.from_dict(req.receipt)
+            except ReceiptFormatError as e:
+                raise HTTPException(422, f"not a receipt: {e}")
+            if r.txid != req.txid:
+                raise HTTPException(422, "the receipt is for another transaction")
+            check = direct_check(req.receipt)
+            store.save_payment_receipt(req.txid, req.receipt, check)
+        return {"payments": store.payments(req.txid), "receipt_check": check}
 
     @app.get("/pay/{inv_id}", response_class=HTMLResponse)
     def pay_page(inv_id: str):
