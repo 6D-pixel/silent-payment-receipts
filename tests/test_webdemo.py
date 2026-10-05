@@ -28,7 +28,7 @@ class Story(unittest.TestCase):
 
     def test_shop_wallet_finds_the_payment(self):
         found = self.s.shop_scan(self.inv["order"])["found"]
-        self.assertEqual(found, [{"vout": 0, "amount_sat": 30_000_000, "order": self.inv["order"]}])
+        self.assertEqual(found, [{"vout": 0, "amount_sat": 30_000_000}])
 
     def test_receipt_verifies(self):
         res = self.s.verify(self.receipt)

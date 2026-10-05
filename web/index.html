@@ -130,6 +130,28 @@
     <p id="loading" class="loading" role="status">Loading Python into your browser…</p>
   </header>
 
+  <section class="why" aria-labelledby="why-title">
+    <h2 id="why-title">What this solves</h2>
+    <div class="why-grid">
+      <article data-tint="yellow">
+        <h3>For shops: one address, forever</h3>
+        <p>Dana shows one silent-payment address for every order. She never makes or tracks new addresses, and each payment still lands in a fresh output that nobody can link to her or to her other payments.</p>
+      </article>
+      <article data-tint="blue">
+        <h3>For buyers: proof you paid</h3>
+        <p>Silent payments leave the payer nothing to point to. A receipt proves “I paid this shop, this amount, for this order”. Anyone can check it against the chain, without your private keys and without the shop's help.</p>
+      </article>
+      <article data-tint="green">
+        <h3>For marketplaces: settle “never paid”</h3>
+        <p>The marketplace checks the receipt against the chain and rules. It holds no money and no keys, and counts each payment for one order only.</p>
+      </article>
+    </div>
+    <div class="why-new">
+      <h3>What's new</h3>
+      <p>Silent payments (BIP-352) already give a shop one private, reusable address. What was missing is proof of payment. A receipt is a 33-byte shared secret and a 64-byte proof (BIP-374 DLEQ), signed over the transaction, the shop's address and the order. The usual workaround, sharing the output tweak, can be faked with a hidden way to take the money back; a receipt can't. As far as we know, no wallet or payment server offers receipts for silent payments today.</p>
+    </div>
+  </section>
+
   <main>
     <ol class="story">
       <li class="step panel-invoice" id="step-invoice" data-state="active">
@@ -151,7 +173,7 @@
           </svg>
         </div>
         <div class="step-text">
-          <p>Dana's Phone Shop gives every order its own payment address, so a payment to it can only be for that order.</p>
+          <p>Dana's Phone Shop shows the same address for every order. The invoice adds the order number, and your receipt will name it.</p>
           <button type="button" class="act" data-action="invoice" disabled>Create the invoice</button>
         </div>
         <div class="step-out" id="out-invoice"></div>
