@@ -1,9 +1,9 @@
 """sppay: a silent-payment payment method for one shop.
 
 The shop shows one static silent-payment address. For each order, sppay makes an
-invoice for an exact amount (the price plus a few sats no other open invoice
-uses), shows a pay page, and watches the chain with watch-only keys to mark the
-invoice paid. A marketplace creates invoices with the shop's API key and gets
+invoice, shows a pay page, and watches the chain with watch-only keys to mark the
+invoice paid. The payer's wallet reports which transaction paid which invoice;
+one transaction pays one invoice. A marketplace creates invoices with the shop's API key and gets
 signed webhooks when they are paid.
 
 Run:  .venv/bin/python -m services.sppay  (settings in services/sppay/config.py)
@@ -95,11 +95,11 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
         """The payer's wallet reports its txid so the invoice shows 'seen' before the block."""
         inv = get(inv_id)
         try:
-            found = scanner.check_tx(req.txid)
+            found = scanner.check_tx(req.txid, inv["id"])
         except SourceError as e:
             raise HTTPException(404, f"transaction not found: {e}")
         if found is None or found["id"] != inv["id"]:
-            raise HTTPException(422, "this transaction does not pay this invoice's exact amount to the shop")
+            raise HTTPException(422, "this transaction does not pay this invoice (wrong amount, or it already paid another one)")
         return public(found, cfg)
 
     @app.get("/pay/{inv_id}", response_class=HTMLResponse)
@@ -135,7 +135,7 @@ def pay_html(inv: dict, shop: str) -> str:
   <h1>Pay {e(shop)}</h1>
   <div>Order {e(inv['order_id'])} on {e(inv['marketplace'])}</div>
   <p class="amount">{btc} BTC</p>
-  <p class="note">Send exactly this amount. The last digits identify your order.</p>
+  <p class="note">Pay with a wallet that makes a receipt, and keep it: it proves you paid this order.</p>
   <div class="qr" aria-label="QR code of the shop's address">{qr}</div>
   <dl>
     <dt>Address</dt><dd>{e(inv['address'])}</dd>

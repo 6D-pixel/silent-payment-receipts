@@ -55,15 +55,26 @@ class Scanner:
         return [{"vout": m.vout, "k": m.k, "amount_sat": tx.vout[m.vout].value}
                 for m in scan(self.keys.b_scan, self.keys.B_spend, [], tx, spks)]
 
-    def process(self, tx: Tx, spks: list[bytes], height: int | None) -> dict | None:
-        """Record what tx pays the shop and settle the invoice it is for. Returns that invoice."""
+    def process(self, tx: Tx, spks: list[bytes], height: int | None, for_invoice: str | None = None) -> dict | None:
+        """Record what tx pays the shop and settle the invoice it is for. Returns that invoice.
+
+        for_invoice is the invoice the payer's wallet said it paid; otherwise the
+        payment is matched only if exactly one open invoice fits it.
+        """
         paid = self.find(tx, spks)
         if not paid:
             return None
         total = sum(o["amount_sat"] for o in paid)
         txid = tx.txid_hex
         known = [p for p in self.store.payments(txid) if p["invoice_id"]]
-        inv = self.store.invoice(known[0]["invoice_id"]) if known else self.store.match_open(total, height)
+        if known:  # one transaction pays one invoice, whatever is claimed later
+            inv = self.store.invoice(known[0]["invoice_id"])
+        elif for_invoice:
+            inv = self.store.invoice(for_invoice)
+            if inv and (inv["status"] not in ("open", "seen") or total < inv["amount_sat"]):
+                inv = None
+        else:
+            inv = self.store.match_open(total, height)
         if inv and height is not None and not (inv["created_height"] < height <= inv["expires_height"]):
             inv = None  # seen in time, but confirmed outside the invoice's window
         for o in paid:
@@ -79,10 +90,10 @@ class Scanner:
             self.webhooks.send(f"invoice.{status}", inv)
         return inv
 
-    def check_tx(self, txid: str) -> dict | None:
-        """The payer says it paid with txid: look at it now instead of waiting for the block."""
+    def check_tx(self, txid: str, invoice_id: str) -> dict | None:
+        """The payer says txid pays invoice_id: look at it now instead of waiting for the block."""
         tx, spks = self.chain.tx_with_prevouts(txid)
-        return self.process(tx, spks, self.chain.block_height(txid))
+        return self.process(tx, spks, self.chain.block_height(txid), for_invoice=invoice_id)
 
     def poll(self) -> int:
         """Scan every block not yet scanned. Returns the tip height."""

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     order_id TEXT NOT NULL,
     memo TEXT NOT NULL,
     price_sat INTEGER NOT NULL,
-    amount_sat INTEGER NOT NULL,      -- price plus a small offset no other open invoice has
+    amount_sat INTEGER NOT NULL,
     created_height INTEGER NOT NULL,
     expires_height INTEGER NOT NULL,
     status TEXT NOT NULL,             -- open, seen, paid, expired
@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
 
 OPEN = ("open", "seen")
-MAX_OFFSET = 999
 
 
 class Conflict(ValueError):
@@ -59,12 +58,7 @@ class Store:
             if self.db.execute("SELECT 1 FROM invoices WHERE marketplace=? AND order_id=?",
                                (marketplace, order_id)).fetchone():
                 raise Conflict(f"order {order_id} already has an invoice")
-            taken = {r[0] for r in self.db.execute(
-                f"SELECT amount_sat FROM invoices WHERE status IN {OPEN}")}
-            free = [price_sat + o for o in range(1, MAX_OFFSET + 1) if price_sat + o not in taken]
-            if not free:
-                raise Conflict("too many open invoices at this price; try again later")
-            amount = free[secrets.randbelow(len(free))]
+            amount = price_sat
             inv_id = secrets.token_urlsafe(12)
             self.db.execute(
                 "INSERT INTO invoices (id, marketplace, order_id, memo, price_sat, amount_sat, created_height,"
@@ -81,15 +75,18 @@ class Store:
         return d
 
     def match_open(self, amount_sat: int, height: int | None) -> dict | None:
-        """The open invoice this payment is for: same exact amount, paid while it was open."""
-        if height is None:
-            row = self.db.execute(f"SELECT id FROM invoices WHERE status IN {OPEN} AND amount_sat=?",
-                                  (amount_sat,)).fetchone()
-        else:
-            row = self.db.execute(
-                f"SELECT id FROM invoices WHERE status IN {OPEN} AND amount_sat=?"
-                " AND created_height < ? AND expires_height >= ?", (amount_sat, height, height)).fetchone()
-        return self.invoice(row["id"]) if row else None
+        """For a payment nobody reported: the one open invoice it fits, if only one does.
+
+        Usually the payer's wallet reports its txid for the invoice instead. When two
+        open invoices have the same price, the payment stays unmatched.
+        """
+        q = f"SELECT id FROM invoices WHERE status IN {OPEN} AND amount_sat <= ?"
+        args: tuple = (amount_sat,)
+        if height is not None:
+            q += " AND created_height < ? AND expires_height >= ?"
+            args += (height, height)
+        rows = self.db.execute(q, args).fetchall()
+        return self.invoice(rows[0]["id"]) if len(rows) == 1 else None
 
     def mark(self, inv_id: str, status: str, txid: str | None = None, vouts: list[int] | None = None,
              paid_height: int | None = None) -> dict:

@@ -155,7 +155,7 @@ class Checkout(unittest.TestCase):
     def test_paid_and_proven(self):
         o = self.order()
         self.assertEqual(o["address"], self.keys.address("signet"))
-        self.assertTrue(30_001 <= o["amount_sat"] <= 30_999)
+        self.assertEqual(o["amount_sat"], 30_000)
 
         txid, receipt = self.pay(o)
         r = self.sppay.post(f"/api/invoices/{o['invoice_id']}/tx", json={"txid": txid})
@@ -184,18 +184,53 @@ class Checkout(unittest.TestCase):
         d = self.dispute(o)
         self.assertEqual((d["ruling"], d["verdict"]["code"]), ("not_paid", "no_receipt"))
 
-    def test_one_payment_cannot_settle_two_orders(self):
-        first, second = self.order(), self.order()
-        self.assertNotEqual(first["amount_sat"], second["amount_sat"])
-        txid, _ = self.pay(first)
-        self.chain.mine()
-        # The buyer signs a second receipt for the same payment, naming the other order.
+    def second_receipt(self, txid, memo):
+        """The buyer signs another receipt for the same payment, naming another order."""
         from spreceipt import make_sender_receipt
         tx, spks = self.chain.tx_with_prevouts(txid)
-        keys = self.buyer.keys[:1]
-        fake = make_sender_receipt(tx, spks, second["address"], second["memo"], keys, "signet")
-        self.receipt(second, fake)
-        self.assertEqual(self.dispute(second)["verdict"]["code"], "wrong_amount")
+        return make_sender_receipt(tx, spks, self.keys.address("signet"), memo, self.buyer.keys[:1], "signet")
+
+    def test_one_payment_cannot_settle_two_orders_here(self):
+        first, second = self.order(), self.order()
+        txid, receipt = self.pay(first)
+        self.chain.mine()
+        self.assertTrue(self.receipt(first, receipt)["verdict"]["ok"])
+        self.receipt(second, self.second_receipt(txid, second["memo"]))
+        self.assertEqual(self.dispute(second)["verdict"]["code"], "outpoint_taken")
+
+    def test_shop_proves_payment_was_claimed_elsewhere(self):
+        o = self.order()
+        txid, receipt = self.pay(o)
+        self.chain.mine()
+        self.receipt(o, receipt)
+        self.assertEqual(self.dispute(o)["ruling"], "paid")
+        # The shop got this from another marketplace: same payment, another order.
+        elsewhere = self.second_receipt(txid, "spr1:other-market:9")
+        r = self.market.post(f"/api/orders/{o['id']}/conflict", json={"receipt": elsewhere.to_dict()}).json()
+        self.assertTrue(r["proven"], r)
+        d = self.dispute(o)
+        self.assertEqual((d["ruling"], d["verdict"]["code"]), ("not_paid", "claimed_twice"))
+
+    def test_edited_receipt_is_no_proof_of_a_double_claim(self):
+        o = self.order()
+        txid, receipt = self.pay(o)
+        self.chain.mine()
+        self.receipt(o, receipt)
+        edited = receipt.to_dict() | {"memo": "spr1:other-market:9"}  # not signed by the buyer
+        r = self.market.post(f"/api/orders/{o['id']}/conflict", json={"receipt": edited}).json()
+        self.assertFalse(r["proven"])
+        self.assertEqual(self.dispute(o)["ruling"], "paid")
+
+    def test_reported_txid_picks_the_order_when_prices_match(self):
+        first, second = self.order(), self.order()
+        txid, _ = self.pay(second)
+        self.chain.mine()
+        self.scanner.poll()  # two open invoices fit, so the scanner alone can't tell
+        self.assertEqual((self.invoice(first)["status"], self.invoice(second)["status"]), ("open", "open"))
+        r = self.sppay.post(f"/api/invoices/{second['invoice_id']}/tx", json={"txid": txid})
+        self.assertEqual(r.json()["status"], "paid")
+        again = self.sppay.post(f"/api/invoices/{first['invoice_id']}/tx", json={"txid": txid})
+        self.assertEqual(again.status_code, 422)  # one transaction pays one invoice
 
     def test_underpaid(self):
         o = self.order()
@@ -204,19 +239,16 @@ class Checkout(unittest.TestCase):
         self.scanner.poll()
         self.assertEqual(self.invoice(o)["status"], "open")
         self.receipt(o, receipt)
-        self.assertEqual(self.dispute(o)["verdict"]["code"], "wrong_amount")
+        self.assertEqual(self.dispute(o)["verdict"]["code"], "underpaid")
 
     def test_old_payment_is_not_accepted(self):
         early = self.order()
         txid, _ = self.pay(early)
         self.chain.mine()
         later = self.order(price=30_000)
-        # Even if the amounts matched, a payment from before the invoice cannot count.
-        from spreceipt import make_sender_receipt
-        tx, spks = self.chain.tx_with_prevouts(txid)
-        r = make_sender_receipt(tx, spks, later["address"], later["memo"], self.buyer.keys[:1], "signet")
-        self.receipt(later, r)
-        self.assertIn(self.dispute(later)["verdict"]["code"], ("paid_before_invoice", "wrong_amount"))
+        # Same shop, same price, but the payment came before this order existed.
+        self.receipt(later, self.second_receipt(txid, later["memo"]))
+        self.assertEqual(self.dispute(later)["verdict"]["code"], "paid_before_invoice")
 
     def test_webhook_needs_the_shop_signature(self):
         from services.sppay.scanner import sign_body

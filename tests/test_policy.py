@@ -5,7 +5,7 @@ import unittest
 
 from spreceipt import make_sender_receipt
 from spreceipt.crypto import G, random_scalar
-from spreceipt.policy import ChainStatus, OrderTerms, check_payment
+from spreceipt.policy import ChainStatus, OrderTerms, check_double_claim, check_payment
 from spreceipt.tx import TxOut, p2tr_script
 
 from tests.helpers import Receiver, p2wpkh_input, pay
@@ -42,12 +42,21 @@ class Policy(unittest.TestCase):
         other = copy.replace(self.order, memo="spr1:mkt:78")
         self.assertEqual(self.check(order=other).code, "wrong_memo")
 
-    def test_one_payment_claimed_for_another_order(self):
-        # The payer can sign any memo for the same output, but the other order has
-        # its own exact amount, so the payment cannot cover it.
-        other = copy.replace(self.order, memo="spr1:other-mkt:9", amount_sat=150_013)
-        r = make_sender_receipt(self.tx, self.spks, self.address, other.memo, self.keys, NET)
-        self.assertEqual(self.check(receipt=r, order=other).code, "wrong_amount")
+    def test_double_claim_is_proven_by_the_two_receipts(self):
+        # The payer signs a second receipt for the same payment, naming another order.
+        # Each verifies on its own; together they prove the payment was claimed twice.
+        other = make_sender_receipt(self.tx, self.spks, self.address, "spr1:other-mkt:9", self.keys, NET)
+        self.assertTrue(self.check(receipt=other, order=copy.replace(self.order, memo="spr1:other-mkt:9")).ok)
+        v = check_double_claim(self.receipt, other, self.tx, self.spks, NET)
+        self.assertTrue(v.ok, v.reason)
+        self.assertEqual((v.code, v.outpoints), ("claimed_twice", [(self.tx.txid_hex, 0)]))
+
+    def test_double_claim_needs_two_valid_receipts_with_different_orders(self):
+        same = make_sender_receipt(self.tx, self.spks, self.address, self.order.memo, self.keys, NET)
+        self.assertFalse(check_double_claim(self.receipt, same, self.tx, self.spks, NET).ok)
+        forged = copy.deepcopy(self.receipt)
+        forged.memo = "spr1:other-mkt:9"  # edited, not signed by the payer
+        self.assertFalse(check_double_claim(self.receipt, forged, self.tx, self.spks, NET).ok)
 
     def test_tampered_proof(self):
         bad = copy.deepcopy(self.receipt)
@@ -62,9 +71,9 @@ class Policy(unittest.TestCase):
         self.assertEqual(self.check(status=ChainStatus(9, 100)).code, "paid_before_invoice")
         self.assertEqual(self.check(status=ChainStatus(1, 111)).code, "paid_after_expiry")
 
-    def test_amount_must_be_exact(self):
-        for amount in (150_001, 149_999):
-            self.assertEqual(self.check(order=copy.replace(self.order, amount_sat=amount)).code, "wrong_amount")
+    def test_amount(self):
+        self.assertEqual(self.check(order=copy.replace(self.order, amount_sat=150_001)).code, "underpaid")
+        self.assertTrue(self.check(order=copy.replace(self.order, amount_sat=149_999)).ok)  # overpaid is fine
 
     def test_receipt_cannot_pick_the_network(self):
         # test, signet and regtest share the tsp prefix: the order's network wins.

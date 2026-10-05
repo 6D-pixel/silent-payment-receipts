@@ -5,16 +5,19 @@ and a marketplace need around it:
 
 | Service | Port | Holds | Does |
 |---|---|---|---|
-| `sppay`, the shop's payment method | 8401 | watch-only keys (`b_scan`, `B_spend`) | Makes an invoice per order for an exact amount, shows the pay page, scans signet and marks invoices paid, and sends signed webhooks |
+| `sppay`, the shop's payment method | 8401 | watch-only keys (`b_scan`, `B_spend`) | Makes an invoice per order, shows the pay page, scans signet and marks invoices paid, and sends signed webhooks |
 | `market`, the marketplace | 8402 | no keys, no money | Records each order's terms at checkout, takes the buyer's receipt, and rules on "you never paid me" with `spreceipt.policy` |
 | `buyer`, a command-line wallet | — | the buyer's P2WPKH keys | Orders, pays, and hands the receipt to the marketplace |
 
-The memo can't tie a payment to an order, since the payer can sign any memo for the
-same output. Instead, the order is bound by:
-- the invoice's exact amount: the price plus 1–999 sat, which no other open invoice of the shop has;
-- the blocks in which the invoice was open.
-
-The marketplace also accepts each outpoint for one order only.
+**One transaction pays one order.** The payer can sign receipts with different memos
+for the same payment, so:
+- the buyer's wallet tells sppay which transaction paid which invoice, and sppay never
+  lets one transaction pay a second invoice;
+- the marketplace accepts each outpoint for one order only;
+- if the buyer claims the same payment at another marketplace, the shop shows that
+  receipt (`POST /api/orders/<id>/conflict`): two receipts the buyer signed for one
+  payment, naming two orders, prove the double claim;
+- the payment must confirm after the order was made, so an old payment can't be reused.
 
 ## Run on public signet
 
