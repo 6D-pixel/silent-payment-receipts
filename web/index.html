@@ -7,26 +7,117 @@
   <meta name="description" content="Pay a Bitcoin silent-payment address, then prove the payment to someone else without sharing private keys.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Lilita+One&family=Luckiest+Guy&family=Patrick+Hand&display=swap">
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
+  <!-- The cast. Every character is a bust drawn from the same few shapes: round head, ink outline, flat spot colour. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="c-ref-body"><path d="M8 130C8 100 28 88 60 88s52 12 52 42z"/></clipPath>
+
+      <symbol id="c-you" viewBox="0 0 120 130">
+        <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="#2f63d0"/>
+          <rect x="51" y="74" width="18" height="18" rx="6" fill="#fff1d6"/>
+          <path d="M42 90q18 18 36 0" fill="#1f4ba8"/>
+          <path d="M52 104v16M68 104v16" fill="none" stroke="#fff" stroke-width="3"/>
+          <circle cx="60" cy="50" r="28" fill="#fff1d6"/>
+          <path d="M31 50C27 24 46 14 62 15c20 1 31 17 27 35-7-9-17-15-30-14-12 1-22 6-28 14z" fill="#15172b"/>
+          <circle cx="49" cy="57" r="3.2" fill="#15172b" stroke="none"/>
+          <circle cx="71" cy="57" r="3.2" fill="#15172b" stroke="none"/>
+          <path d="M50 67q10 8 20 0" fill="none"/>
+        </g>
+      </symbol>
+
+      <symbol id="c-dana" viewBox="0 0 120 130">
+        <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="#fff"/>
+          <path d="M32 130l6-30q22 10 44 0l6 30z" fill="#ffd23c"/>
+          <path d="M38 100l8-11M82 100l-8-11" fill="none"/>
+          <rect x="51" y="74" width="18" height="18" rx="6" fill="#fff1d6"/>
+          <circle cx="60" cy="17" r="10" fill="#15172b"/>
+          <circle cx="60" cy="50" r="28" fill="#fff1d6"/>
+          <path d="M32 48C30 28 44 20 60 20s30 8 28 28c-6-8-14-12-28-12S38 40 32 48z" fill="#15172b"/>
+          <circle cx="49" cy="55" r="8" fill="#fff" fill-opacity=".65"/>
+          <circle cx="71" cy="55" r="8" fill="#fff" fill-opacity=".65"/>
+          <path d="M57 55h6" fill="none"/>
+          <circle cx="49" cy="55" r="2.4" fill="#15172b" stroke="none"/>
+          <circle cx="71" cy="55" r="2.4" fill="#15172b" stroke="none"/>
+          <path d="M49 68q11 12 22 0z" fill="#fff"/>
+          <rect x="52" y="107" width="16" height="10" rx="2" fill="#fff" stroke-width="2.5"/>
+        </g>
+      </symbol>
+
+      <symbol id="c-ref" viewBox="0 0 120 130">
+        <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+          <g clip-path="url(#c-ref-body)" stroke="none">
+            <rect x="0" y="80" width="120" height="50" fill="#fff"/>
+            <rect x="14" y="80" width="12" height="50" fill="#1d9a63"/>
+            <rect x="38" y="80" width="12" height="50" fill="#1d9a63"/>
+            <rect x="62" y="80" width="12" height="50" fill="#1d9a63"/>
+            <rect x="86" y="80" width="12" height="50" fill="#1d9a63"/>
+          </g>
+          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="none"/>
+          <rect x="51" y="74" width="18" height="18" rx="6" fill="#fff1d6"/>
+          <circle cx="60" cy="52" r="27" fill="#fff1d6"/>
+          <path d="M31 42C30 22 44 14 60 14s30 8 29 28z" fill="#15172b"/>
+          <path d="M24 42h72q0 9-12 9H36q-12 0-12-9z" fill="#15172b"/>
+          <path d="M44 55l9 3M76 55l-9 3" fill="none"/>
+          <circle cx="49" cy="63" r="3" fill="#15172b" stroke="none"/>
+          <circle cx="71" cy="63" r="3" fill="#15172b" stroke="none"/>
+          <circle cx="60" cy="75" r="4" fill="#ffd23c" stroke-width="3"/>
+          <path d="M64 75l22 8" fill="none" stroke-width="3"/>
+        </g>
+      </symbol>
+
+      <symbol id="c-bandit" viewBox="0 0 120 130">
+        <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8 130C8 100 28 88 60 88s52 12 52 42z" fill="#2f63d0"/>
+          <rect x="51" y="74" width="18" height="18" rx="6" fill="#fff1d6"/>
+          <path d="M42 90q18 18 36 0" fill="#1f4ba8"/>
+          <circle cx="60" cy="50" r="28" fill="#fff1d6"/>
+          <path d="M31 50C27 24 46 14 62 15c20 1 31 17 27 35-7-9-17-15-30-14-12 1-22 6-28 14z" fill="#15172b"/>
+          <path d="M31 51Q60 41 89 51l-2 14Q60 57 33 65z" fill="#d93249"/>
+          <path d="M42 54l12 4-12 3z M78 54l-12 4 12 3z" fill="#fff" stroke-width="2.5"/>
+          <path d="M48 71q13 12 26-1z" fill="#fff"/>
+        </g>
+      </symbol>
+
+      <symbol id="c-crowd" viewBox="0 0 240 100">
+        <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" fill="#8f9bad">
+          <path d="M6 100c0-24 14-34 34-34s34 10 34 34z"/>
+          <circle cx="40" cy="42" r="20"/>
+          <path d="M84 100c0-30 18-42 38-42s38 12 38 42z"/>
+          <circle cx="122" cy="32" r="22"/>
+          <path d="M170 100c0-24 14-34 34-34s34 10 34 34z"/>
+          <circle cx="204" cy="42" r="20"/>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
   <header class="top">
     <div class="top-inner">
       <div class="intro">
         <h1>Pay privately.<br>Still prove it.</h1>
-        <p>Bitcoin silent payments hide who got paid. That protects privacy, but leaves the payer with nothing to show if the shop says the money never came. Here you pay a shop, then prove the payment to a third party without sharing any private keys.</p>
+        <p>Bitcoin silent payments hide who got paid. That protects privacy, but leaves you with nothing to show if the shop says the money never came. Here you buy a phone from Dana's shop on a marketplace. When Dana says the payment never arrived, you prove it to the marketplace without sharing any private keys.</p>
       </div>
-      <div class="controls">
-        <details class="chain-chip">
-          <summary><span class="dot" aria-hidden="true"></span><span id="chain-label">Simulated chain</span></summary>
-          <p>Real, signed Bitcoin transactions and real proofs, run by the project's Python code in your browser. What's simulated: no network and no mining. A block is a counter, mined right after each payment.</p>
-        </details>
-        <label class="switch"><input type="checkbox" id="math-toggle"> Show the math</label>
-        <div class="buttons">
-          <button type="button" id="autoplay" class="ghost" disabled>Play the whole story</button>
-          <button type="button" id="reset" class="ghost" disabled>Start over</button>
-        </div>
+      <ul class="cast" aria-label="The characters">
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg><span class="cast-name">You</span><span class="cast-role">the payer</span></li>
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg><span class="cast-name">Dana</span><span class="cast-role">the phone shop</span></li>
+        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg><span class="cast-name">Marketplace</span><span class="cast-role">checks the receipt</span></li>
+      </ul>
+    </div>
+    <div class="controls">
+      <details class="chain-chip">
+        <summary><span class="dot" aria-hidden="true"></span><span id="chain-label">Simulated chain</span></summary>
+        <p>Real, signed Bitcoin transactions and real proofs, run by the project's Python code in your browser. What's simulated: no network and no mining. A block is a counter, mined right after each payment.</p>
+      </details>
+      <label class="switch"><input type="checkbox" id="math-toggle"> Show the math</label>
+      <div class="buttons">
+        <button type="button" id="autoplay" class="ghost" disabled>Play the whole story</button>
+        <button type="button" id="reset" class="ghost" disabled>Start over</button>
       </div>
     </div>
     <p id="loading" class="loading" role="status">Loading Python into your browser…</p>
@@ -34,45 +125,144 @@
 
   <main>
     <ol class="story">
-      <li class="step" id="step-invoice" data-state="active">
+      <li class="step panel-invoice" id="step-invoice" data-state="active">
+        <h2>The shop sends you an invoice</h2>
+        <div class="step-art">
+          <svg viewBox="0 0 420 170" aria-hidden="true">
+            <use href="#c-you" x="28" y="40" width="120" height="130"/>
+            <use href="#c-dana" x="276" y="40" width="120" height="130"/>
+            <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+              <g transform="rotate(-7 236 100)">
+                <rect x="200" y="46" width="72" height="94" fill="#fff"/>
+                <path d="M210 62h34M210 74h22" fill="none" stroke-width="3"/>
+                <rect x="212" y="88" width="32" height="32" fill="none" stroke-width="3"/>
+                <path d="M220 96h8v8h-8zM232 108h8v8h-8z" fill="#15172b" stroke="none"/>
+                <path d="M254 126h10" fill="none" stroke-width="3"/>
+              </g>
+              <circle cx="272" cy="136" r="10" fill="#fff1d6"/>
+            </g>
+          </svg>
+        </div>
         <div class="step-text">
-          <h2>The shop sends you an invoice</h2>
           <p>Dana's Phone Shop gives every order its own payment address, so a payment to it can only be for that order.</p>
           <button type="button" class="act" data-action="invoice" disabled>Create the invoice</button>
         </div>
         <div class="step-out" id="out-invoice"></div>
       </li>
 
-      <li class="step" id="step-pay" data-state="locked">
+      <li class="step panel-pay" id="step-pay" data-state="locked">
+        <h2>You pay it</h2>
+        <div class="step-art">
+          <svg viewBox="0 0 420 170" aria-hidden="true">
+            <use href="#c-you" x="24" y="40" width="120" height="130"/>
+            <use href="#c-dana" x="284" y="40" width="120" height="130"/>
+            <g stroke="#15172b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M150 52h28M138 70h40M152 88h26" fill="none"/>
+              <circle cx="218" cy="70" r="31" fill="#ffd23c"/>
+              <circle cx="218" cy="70" r="23" fill="none" stroke-width="2.5"/>
+              <path d="M211 55v-5M221 55v-5M211 90v-5M221 90v-5" fill="none" stroke-width="3"/>
+              <text x="218" y="83" text-anchor="middle" font-family="Luckiest Guy, Lilita One, sans-serif" font-size="36" fill="#15172b" stroke="none">B</text>
+            </g>
+            <g font-family="Lilita One, sans-serif" font-size="15" text-anchor="middle">
+              <rect x="180" y="114" width="76" height="24" rx="3" fill="#fff" stroke="#15172b" stroke-width="3"/>
+              <text x="218" y="132" fill="#15172b">0.30 BTC</text>
+            </g>
+          </svg>
+        </div>
         <div class="step-text">
-          <h2>You pay it</h2>
           <p>Your wallet sends the amount to the invoice address. A block is mined straight away, so the payment is confirmed.</p>
           <button type="button" class="act" data-action="pay" disabled>Pay the invoice</button>
         </div>
         <div class="step-out" id="out-pay"></div>
       </li>
 
-      <li class="step" id="step-chain" data-state="locked">
+      <li class="step panel-chain" id="step-chain" data-state="locked">
+        <h2>What everyone else sees</h2>
+        <div class="step-art">
+          <svg viewBox="0 0 420 250" aria-hidden="true">
+            <g stroke="#15172b" stroke-width="3" stroke-linejoin="round" fill="#fff" fill-opacity=".55">
+              <path d="M0 148V92h44v-22h38v78M82 148V80h54v68M136 148V104h40v-30h34v74M210 148V96h46v52M256 148V66h40v82M296 148V100h44v48M340 148V84h50v64M390 148V108h30v40" fill-opacity=".45"/>
+            </g>
+            <rect x="0" y="148" width="420" height="102" fill="#fff" fill-opacity=".45"/>
+            <g fill="#15172b" fill-opacity=".5">
+              <rect x="14" y="104" width="8" height="8"/><rect x="28" y="104" width="8" height="8"/><rect x="14" y="120" width="8" height="8"/>
+              <rect x="94" y="96" width="8" height="8"/><rect x="112" y="96" width="8" height="8"/><rect x="94" y="114" width="8" height="8"/><rect x="112" y="114" width="8" height="8"/>
+              <rect x="222" y="110" width="8" height="8"/><rect x="238" y="110" width="8" height="8"/><rect x="222" y="126" width="8" height="8"/>
+              <rect x="266" y="82" width="8" height="8"/><rect x="280" y="82" width="8" height="8"/><rect x="266" y="98" width="8" height="8"/><rect x="280" y="98" width="8" height="8"/>
+              <rect x="352" y="98" width="8" height="8"/><rect x="368" y="98" width="8" height="8"/><rect x="352" y="114" width="8" height="8"/>
+            </g>
+            <g transform="translate(0 80)">
+            <use href="#c-crowd" x="4" y="66" width="250" height="104"/>
+            <g font-family="Luckiest Guy, Lilita One, sans-serif" font-size="30" fill="#d93249" stroke="#15172b" stroke-width="1.5" text-anchor="middle" paint-order="stroke">
+              <text x="40" y="52" transform="rotate(-10 40 52)">?</text>
+              <text x="122" y="34" transform="rotate(6 122 34)">?</text>
+              <text x="208" y="52" transform="rotate(-6 208 52)">?</text>
+            </g>
+            <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M290 132v38M386 132v38" fill="none"/>
+              <rect x="268" y="18" width="140" height="116" fill="#fff"/>
+              <rect x="282" y="32" width="64" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="352" y="32" width="42" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="282" y="56" width="52" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="340" y="56" width="54" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="282" y="80" width="68" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="356" y="80" width="38" height="12" rx="2" fill="#c9d0db" stroke-width="2.5"/>
+              <rect x="282" y="104" width="60" height="12" rx="2" fill="#ffd23c" stroke-width="2.5"/>
+              <rect x="348" y="104" width="46" height="12" rx="2" fill="#ffd23c" stroke-width="2.5"/>
+            </g>
+            </g>
+          </svg>
+        </div>
         <div class="step-text">
-          <h2>What everyone else sees</h2>
           <p>Anyone can read this transaction. Nothing in it says who was paid: the shop's output is a fresh, random-looking key.</p>
           <button type="button" class="act" data-action="dispute" disabled>Play the dispute</button>
         </div>
         <div class="step-out" id="out-chain"></div>
       </li>
 
-      <li class="step" id="step-receipt" data-state="locked">
+      <li class="step panel-receipt" id="step-receipt" data-state="locked">
+        <h2>You make a receipt</h2>
+        <div class="step-art">
+          <svg viewBox="0 0 420 170" aria-hidden="true">
+            <use href="#c-you" x="22" y="40" width="120" height="130"/>
+            <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+              <g transform="rotate(5 250 90)">
+                <rect x="176" y="14" width="150" height="132" fill="#fff"/>
+                <path d="M192 36h70M192 52h96M192 68h52" fill="none" stroke-width="3"/>
+                <circle cx="290" cy="104" r="20" fill="#1d9a63"/>
+                <path d="M280 104l7 8 13-16" fill="none" stroke="#fff" stroke-width="5"/>
+                <rect x="190" y="112" width="70" height="22" rx="3" fill="#ffd23c" stroke-width="3"/>
+                <text x="225" y="128" text-anchor="middle" font-family="Lilita One, sans-serif" font-size="14" fill="#15172b" stroke="none">97 bytes</text>
+              </g>
+              <circle cx="156" cy="140" r="10" fill="#fff1d6"/>
+            </g>
+          </svg>
+        </div>
         <div class="step-text">
-          <h2>You make a receipt</h2>
           <p>Your wallet proves that the coins it spent paid this address, for this order only. The proof is 97 bytes and contains no private keys.</p>
           <button type="button" class="act" data-action="receipt" disabled>Create the receipt</button>
         </div>
         <div class="step-out" id="out-receipt"></div>
       </li>
 
-      <li class="step" id="step-verify" data-state="locked">
+      <li class="step panel-verify" id="step-verify" data-state="locked">
+        <h2>The marketplace checks it</h2>
+        <div class="step-art">
+          <svg viewBox="0 0 420 170" aria-hidden="true">
+            <use href="#c-ref" x="22" y="40" width="120" height="130"/>
+            <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M222 124h20M286 124h20" fill="none" stroke-width="4"/>
+              <rect x="178" y="98" width="44" height="44" fill="#fff"/>
+              <rect x="242" y="98" width="44" height="44" fill="#fff"/>
+              <rect x="306" y="98" width="44" height="44" fill="#fff"/>
+              <path d="M188 112h24M188 124h14M252 112h24M252 124h14M316 112h24M316 124h14" fill="none" stroke-width="3"/>
+              <path d="M300 82L352 134" fill="none" stroke-width="9"/>
+              <circle cx="276" cy="58" r="38" fill="#fff" fill-opacity=".55"/>
+              <path d="M254 44q8-10 20-10" fill="none" stroke-width="4" stroke="#fff"/>
+            </g>
+          </svg>
+        </div>
         <div class="step-text">
-          <h2>A marketplace checks it</h2>
           <p>The marketplace fetches the transaction from the chain itself and checks the receipt against it. It trusts nothing else in the file.</p>
           <button type="button" class="act" data-action="verify" disabled>Check the receipt</button>
           <label class="file-pick">Or check a receipt.json file <input type="file" id="receipt-file" accept="application/json,.json" disabled></label>
@@ -80,26 +270,71 @@
         <div class="step-out" id="out-verify"></div>
       </li>
 
-      <li class="step" id="step-cheat" data-state="locked">
+      <li class="step strip" id="step-cheat" data-state="locked">
+        <h2>Now try to cheat</h2>
         <div class="step-text">
-          <h2>Now try to cheat</h2>
           <p>Each attempt goes through the same check the marketplace just ran.</p>
         </div>
         <div class="cheats">
           <article class="cheat" id="cheat-reuse">
             <h3>Use it for another order</h3>
+            <div class="cheat-art">
+              <svg viewBox="0 0 300 130" aria-hidden="true">
+                <use href="#c-bandit" x="14" y="22" width="100" height="108"/>
+                <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+                  <g transform="rotate(6 200 70)">
+                    <rect x="150" y="16" width="110" height="82" fill="#fff"/>
+                    <path d="M162 34h50" fill="none" stroke-width="3"/>
+                    <text x="205" y="80" text-anchor="middle" font-family="Luckiest Guy, Lilita One, sans-serif" font-size="30" fill="#d93249" stroke="none">#2002</text>
+                  </g>
+                  <circle cx="148" cy="108" r="9" fill="#fff1d6"/>
+                </g>
+              </svg>
+            </div>
             <p>Change the order in your receipt to Order #2002 and claim this payment again.</p>
             <button type="button" class="act" data-action="cheat-reuse" disabled>Try it</button>
             <div class="cheat-out"></div>
           </article>
           <article class="cheat" id="cheat-tamper">
             <h3>Edit the proof</h3>
+            <div class="cheat-art">
+              <svg viewBox="0 0 300 130" aria-hidden="true">
+                <use href="#c-bandit" x="14" y="22" width="100" height="108"/>
+                <g stroke="#15172b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+                  <g fill="#fff">
+                    <rect x="128" y="80" width="24" height="24"/><rect x="152" y="80" width="24" height="24"/>
+                    <rect x="176" y="80" width="24" height="24" fill="#d93249"/>
+                    <rect x="200" y="80" width="24" height="24"/><rect x="224" y="80" width="24" height="24"/>
+                    <rect x="248" y="80" width="24" height="24"/>
+                  </g>
+                  <path d="M222 22l-18 52" stroke-width="9" fill="none"/>
+                  <path d="M222 22l-18 52" stroke-width="3" stroke="#ffd23c" fill="none"/>
+                  <path d="M200 66l-4 14 14-5z" fill="#fff1d6"/>
+                  <path d="M126 112h148" fill="none" stroke-dasharray="2 6"/>
+                </g>
+              </svg>
+            </div>
             <p>Change one character of the 64-byte proof.</p>
             <button type="button" class="act" data-action="cheat-tamper" disabled>Try it</button>
             <div class="cheat-out"></div>
           </article>
           <article class="cheat" id="cheat-backdoor">
             <h3>Pay with a hidden way back</h3>
+            <div class="cheat-art">
+              <svg viewBox="0 0 300 130" aria-hidden="true">
+                <use href="#c-bandit" x="14" y="22" width="100" height="108"/>
+                <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+                  <rect x="140" y="92" width="96" height="30" fill="#fff"/>
+                  <path d="M152 92v30M224 92v30" fill="none" stroke-dasharray="3 5" stroke-width="2.5"/>
+                  <circle cx="188" cy="62" r="25" fill="#ffd23c"/>
+                  <circle cx="188" cy="62" r="18" fill="none" stroke-width="2.5"/>
+                  <text x="188" y="73" text-anchor="middle" font-family="Luckiest Guy, Lilita One, sans-serif" font-size="28" fill="#15172b" stroke="none">B</text>
+                  <circle cx="262" cy="52" r="10" fill="#fff"/>
+                  <path d="M262 62v38M262 82h10M262 94h8" fill="none"/>
+                  <path d="M212 70q22 22 42 -10" fill="none" stroke-dasharray="2 7" stroke-width="3"/>
+                </g>
+              </svg>
+            </div>
             <p>Pay 0.10 BTC to a key built so the usual "share the tweak" check passes, while you keep a way to take the money back.</p>
             <button type="button" class="act" data-action="cheat-backdoor" disabled>Try it</button>
             <div class="cheat-out"></div>
@@ -113,12 +348,37 @@
       <div class="more-grid">
         <article>
           <h3>The shop proves it was paid</h3>
+          <div class="more-art">
+            <svg viewBox="0 0 300 110" aria-hidden="true">
+              <use href="#c-dana" x="20" y="12" width="92" height="100"/>
+              <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+                <rect x="150" y="26" width="110" height="76" fill="#fff"/>
+                <path d="M205 26v76" fill="none"/>
+                <path d="M162 44h32M162 58h32M162 72h20M216 44h32M216 58h32" fill="none" stroke-width="3"/>
+                <circle cx="132" cy="102" r="9" fill="#fff1d6"/>
+              </g>
+            </svg>
+          </div>
           <p>The other direction: the shop shows its accountant that the output is its income, with a proof signed by the output's own key.</p>
           <button type="button" class="act" data-action="income" disabled>Prove the income</button>
           <div class="more-out" id="out-income"></div>
         </article>
         <article>
           <h3>A receipt from a real Bitcoin Core node</h3>
+          <div class="more-art">
+            <svg viewBox="0 0 300 110" aria-hidden="true">
+              <use href="#c-ref" x="20" y="12" width="92" height="100"/>
+              <g stroke="#15172b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+                <rect x="150" y="14" width="110" height="26" fill="#fff"/>
+                <rect x="150" y="46" width="110" height="26" fill="#fff"/>
+                <rect x="150" y="78" width="110" height="26" fill="#fff"/>
+                <path d="M196 27h50M196 59h50M196 91h50" fill="none" stroke-width="3"/>
+                <circle cx="166" cy="27" r="4" fill="#1d9a63" stroke-width="2"/>
+                <circle cx="166" cy="59" r="4" fill="#1d9a63" stroke-width="2"/>
+                <circle cx="166" cy="91" r="4" fill="#ffd23c" stroke-width="2"/>
+              </g>
+            </svg>
+          </div>
           <p>This receipt was made on a Bitcoin Core regtest chain. It carries its transactions, so the same check runs on Core-built bytes.</p>
           <button type="button" class="act" data-action="sample" disabled>Check the saved receipt</button>
           <div class="more-out" id="out-sample"></div>
