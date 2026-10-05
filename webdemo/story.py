@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from spreceipt import Receipt, ReceiptError, ReceiptFormatError, make_receiver_proof, make_sender_receipt, verify_receipt
 from spreceipt._vendor import bech32m
 from spreceipt.bip352 import (
-    SEGWIT_HRP, decode_sp_address, encode_p2tr_address, encode_sp_address, labeled_spend_key, scan,
+    SEGWIT_HRP, decode_sp_address, encode_p2tr_address, encode_sp_address, scan,
     sender_output_keys,
 )
 from spreceipt.crypto import G, Scalar, hash160, random_scalar, tagged_hash
@@ -148,9 +148,10 @@ class DemoSession:
             raise ValueError("amount must be between 10,000 sat and 1 BTC")
         order = self.next_order
         self.next_order += 1
-        B_scan, B_m = self.b_scan * G, labeled_spend_key(self.b_scan, self.b_spend * G, order)
+        # One address for every order: the receipt names the order, not the address.
+        B_scan, B_m = self.b_scan * G, self.b_spend * G
         invoice = {"order": order, "memo": f"Order #{order}", "item": item[:60], "amount_sat": amount_sat,
-                   "address": encode_sp_address(B_scan, B_m, NET), "label": order,
+                   "address": encode_sp_address(B_scan, B_m, NET),
                    "math": {"B_scan": B_scan.to_bytes_compressed().hex(), "B_m": B_m.to_bytes_compressed().hex()},
                    "txid": None}
         self.orders[order] = invoice
@@ -181,8 +182,8 @@ class DemoSession:
         if not inv["txid"]:
             return {"found": []}
         tx, spks, _ = resolve(self.chain, inv["txid"])
-        found = scan(self.b_scan, self.b_spend * G, list(self.orders), tx, spks)
-        return {"found": [{"vout": m.vout, "amount_sat": tx.vout[m.vout].value, "order": m.label} for m in found]}
+        found = scan(self.b_scan, self.b_spend * G, [], tx, spks)
+        return {"found": [{"vout": m.vout, "amount_sat": tx.vout[m.vout].value} for m in found]}
 
     def make_receipt(self, order: int) -> dict:
         inv = self._order(order)
@@ -263,7 +264,7 @@ class DemoSession:
         if not inv["txid"]:
             raise ValueError(f"order #{order} is not paid yet")
         tx, spks, _ = resolve(self.chain, inv["txid"])
-        proof = make_receiver_proof(tx, spks, self.b_scan, self.b_spend, order, memo, NET,
+        proof = make_receiver_proof(tx, spks, self.b_scan, self.b_spend, None, memo, NET,
                                     make_bundle(self.chain, inv["txid"]))
         d = proof.to_dict()
         return {"proof": d, "result": self.verify(d)}

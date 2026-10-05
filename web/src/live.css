@@ -150,3 +150,27 @@
   .desk-two { grid-template-columns: minmax(0, 1fr); }
 }
 .verdict.wait .stamp::after { background: var(--blue); }
+
+/* ------------------------------------------------------------ the story tab: what this solves */
+
+.why { max-width: 1180px; margin: 0 auto; padding: 1.5rem 1rem 0.5rem; }
+.why > h2 {
+  display: inline-block; margin: 0 0 1.2rem; padding: 0.4rem 1rem; font: 400 1.5rem/1.15 var(--head);
+  background: var(--yellow); border: var(--line) solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+}
+.why-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; }
+.why-grid article { background: var(--sheet); border: var(--line) solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.why-grid article[data-tint="yellow"] { --tint: var(--yellow-tint); }
+.why-grid article[data-tint="blue"] { --tint: var(--blue-tint); }
+.why-grid article[data-tint="green"] { --tint: var(--green-tint); }
+.why-grid h3 { margin: 0; padding: 0.6rem 0.9rem; font: 400 1.2rem/1.2 var(--head); background: var(--tint); border-bottom: var(--line) solid var(--ink); }
+.why-grid p { margin: 0; padding: 0.8rem 0.9rem 1rem; }
+.why-new {
+  margin-top: 1.4rem; padding: 0.9rem 1.1rem 1rem; background: #fff;
+  border: var(--line) solid var(--ink); box-shadow: 6px 6px 0 var(--ink);
+}
+.why-new h3 { margin: 0 0 0.4rem; font: 400 1.35rem/1.2 var(--shout); letter-spacing: 0.02em; color: var(--red); }
+.why-new p { margin: 0; max-width: 62rem; }
+@media (max-width: 860px) {
+  .why-grid { grid-template-columns: minmax(0, 1fr); }
+}

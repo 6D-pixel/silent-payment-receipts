@@ -125,10 +125,10 @@ function renderInvoice(inv: Invoice) {
     ["Item", inv.item],
     ["Amount", h("strong", {}, btc(inv.amount_sat))],
     ["Pay to", h("span", { class: "addr" }, short(inv.address, 12), " ", copyButton(inv.address))],
-  ], qrBox, h("p", { class: "slip-note" }, "This address is only used for this order.")),
+  ], qrBox, h("p", { class: "slip-note" }, "Dana uses this one address for every order.")),
   math("Inside the address (BIP-352)",
     ["Scan key B_scan", inv.math.B_scan],
-    ["Spend key for this order B_m = B_spend + hash(b_scan ‖ 1001)·G", inv.math.B_m]));
+    ["Spend key B_spend", inv.math.B_m]));
   $<HTMLButtonElement>("[data-action=pay]").textContent = `Pay ${btc(inv.amount_sat)}`;
 }
 
