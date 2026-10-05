@@ -16,6 +16,9 @@ keys are shared, and the receiver does not have to cooperate.
        alt="Animated diagram: Alice pays 0.30 BTC to a shop's silent-payment address; on chain the output is a random-looking key; the shop says it was never paid; Alice sends a receipt for Order #1001 to a marketplace, which fetches the transaction from its own node, rebuilds the shop's output key and finds it matches output 0, so the receipt is valid.">
 </p>
 
+A narrated video (1:39) shows how a receipt works:
+[mechanism.mp4](https://silent-payment-receipts.vercel.app/mechanism.mp4).
+
 ## Why it's useful
 
 Silent payments hide who was paid. That is good for privacy, but it also means the
