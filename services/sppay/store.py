@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     txid TEXT,
     vouts TEXT,
     paid_height INTEGER,
+    receipt TEXT,                     -- the buyer's receipt, passed on by the marketplace
+    receipt_check TEXT,               -- the shop's own check of it
     created_at REAL NOT NULL,
     UNIQUE (marketplace, order_id)
 );
@@ -72,7 +74,15 @@ class Store:
             return None
         d = dict(row)
         d["vouts"] = json.loads(d["vouts"]) if d["vouts"] else []
+        d["receipt"] = json.loads(d["receipt"]) if d["receipt"] else None
+        d["receipt_check"] = json.loads(d["receipt_check"]) if d["receipt_check"] else None
         return d
+
+    def save_receipt(self, inv_id: str, receipt: dict, check: dict) -> dict:
+        with self.lock:
+            self.db.execute("UPDATE invoices SET receipt=?, receipt_check=? WHERE id=?",
+                            (json.dumps(receipt), json.dumps(check), inv_id))
+        return self.invoice(inv_id)
 
     def match_open(self, amount_sat: int, height: int | None) -> dict | None:
         """For a payment nobody reported: the one open invoice it fits, if only one does.

@@ -31,6 +31,7 @@ class Config:
     network: str = "signet"
     db_path: str = str(DATA / "market.sqlite")
     min_conf: int = 1
+    explorer_tx_url: str = "https://mempool.space/signet/tx/"
     cors_origins: list[str] = field(default_factory=lambda: ["*"])
 
 

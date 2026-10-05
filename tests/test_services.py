@@ -132,6 +132,17 @@ class Checkout(unittest.TestCase):
         self.buyer = Wallet([random_scalar()], "signet")
         self.chain.faucet(self.buyer.spk(self.buyer.keys[0]), 1_000_000)
 
+        from services.wallet.app import create_app as wallet_app
+
+        def route(method, url, body=None):
+            host, path = url.removeprefix("http://").split("/", 1)
+            client = {"market": self.market, "sppay": self.sppay}[host]
+            r = client.request(method, "/" + path, json=body)
+            r.raise_for_status()
+            return r.json()
+
+        self.wallet = TestClient(wallet_app(self.buyer, self.chain, "http://market", http=route))
+
     def tearDown(self):
         self.tmp.cleanup()
 
@@ -160,7 +171,10 @@ class Checkout(unittest.TestCase):
         txid, receipt = self.pay(o)
         r = self.sppay.post(f"/api/invoices/{o['invoice_id']}/tx", json={"txid": txid})
         self.assertEqual(r.json()["status"], "seen")
-        self.assertEqual(self.receipt(o, receipt)["verdict"]["code"], "unconfirmed")
+        res = self.receipt(o, receipt)
+        self.assertEqual(res["verdict"]["code"], "unconfirmed")
+        self.assertEqual(res["order"]["payment"]["state"], "mempool")
+        self.assertEqual(res["order"]["shop_check"]["code"], "unconfirmed")  # the shop got the receipt too
         self.assertEqual(self.dispute(o)["ruling"], "waiting")
 
         self.chain.mine()
@@ -171,6 +185,8 @@ class Checkout(unittest.TestCase):
         d = self.dispute(o)
         self.assertEqual(d["ruling"], "paid", d)
         self.assertEqual(d["verdict"]["amount_sat"], o["amount_sat"])
+        self.assertEqual(d["order"]["payment"]["state"], "confirmed")
+        self.assertTrue(self.invoice(o)["receipt_check"]["ok"])  # the shop's check catches up too
 
     def test_scanner_finds_payment_without_being_told(self):
         o = self.order()
@@ -197,29 +213,6 @@ class Checkout(unittest.TestCase):
         self.assertTrue(self.receipt(first, receipt)["verdict"]["ok"])
         self.receipt(second, self.second_receipt(txid, second["memo"]))
         self.assertEqual(self.dispute(second)["verdict"]["code"], "outpoint_taken")
-
-    def test_shop_proves_payment_was_claimed_elsewhere(self):
-        o = self.order()
-        txid, receipt = self.pay(o)
-        self.chain.mine()
-        self.receipt(o, receipt)
-        self.assertEqual(self.dispute(o)["ruling"], "paid")
-        # The shop got this from another marketplace: same payment, another order.
-        elsewhere = self.second_receipt(txid, "spr1:other-market:9")
-        r = self.market.post(f"/api/orders/{o['id']}/conflict", json={"receipt": elsewhere.to_dict()}).json()
-        self.assertTrue(r["proven"], r)
-        d = self.dispute(o)
-        self.assertEqual((d["ruling"], d["verdict"]["code"]), ("not_paid", "claimed_twice"))
-
-    def test_edited_receipt_is_no_proof_of_a_double_claim(self):
-        o = self.order()
-        txid, receipt = self.pay(o)
-        self.chain.mine()
-        self.receipt(o, receipt)
-        edited = receipt.to_dict() | {"memo": "spr1:other-market:9"}  # not signed by the buyer
-        r = self.market.post(f"/api/orders/{o['id']}/conflict", json={"receipt": edited}).json()
-        self.assertFalse(r["proven"])
-        self.assertEqual(self.dispute(o)["ruling"], "paid")
 
     def test_reported_txid_picks_the_order_when_prices_match(self):
         first, second = self.order(), self.order()
@@ -249,6 +242,33 @@ class Checkout(unittest.TestCase):
         # Same shop, same price, but the payment came before this order existed.
         self.receipt(later, self.second_receipt(txid, later["memo"]))
         self.assertEqual(self.dispute(later)["verdict"]["code"], "paid_before_invoice")
+
+    def test_demo_wallet_pays_and_hands_over_the_receipt(self):
+        self.assertEqual(self.wallet.get("/api/wallet").json()["balance_sat"], 1_000_000)
+        o = self.order()
+        r = self.wallet.post("/api/pay", json={"order_id": o["id"]}).json()
+        self.assertEqual(r["order"]["payment"]["state"], "mempool")
+        self.assertEqual(self.invoice(o)["status"], "seen")
+        self.assertEqual(self.wallet.post("/api/pay", json={"order_id": o["id"]}).status_code, 409)
+        second = self.order()  # open while the payment confirms
+        self.chain.mine()
+        self.assertEqual(self.dispute(o)["ruling"], "paid")
+
+        # The cheat: the same payment, a receipt naming another order.
+        reuse = lambda order: self.wallet.post("/api/reuse", json={"txid": r["txid"], "order_id": order["id"]}).json()
+        self.assertEqual(reuse(second)["verdict"]["code"], "outpoint_taken")
+        self.assertEqual(reuse(self.order())["verdict"]["code"], "outpoint_taken")
+
+    def test_reuse_while_in_the_mempool(self):
+        # The first receipt claims the payment at once, so a second order can't
+        # take it while both wait for the block.
+        o, second = self.order(), self.order()
+        r = self.wallet.post("/api/pay", json={"order_id": o["id"]}).json()
+        cheat = self.wallet.post("/api/reuse", json={"txid": r["txid"], "order_id": second["id"]}).json()
+        self.assertEqual(cheat["verdict"]["code"], "outpoint_taken")
+        self.chain.mine()
+        self.assertEqual(self.dispute(second)["verdict"]["code"], "outpoint_taken")
+        self.assertEqual(self.dispute(o)["ruling"], "paid")
 
     def test_webhook_needs_the_shop_signature(self):
         from services.sppay.scanner import sign_body

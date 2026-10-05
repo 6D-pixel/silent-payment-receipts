@@ -37,8 +37,10 @@ class WalletError(RuntimeError):
 
 
 class Wallet:
-    def __init__(self, keys: list[Scalar], network: str = "signet", path: pathlib.Path | None = None):
+    def __init__(self, keys: list[Scalar], network: str = "signet", path: pathlib.Path | None = None,
+                 paid: dict[str, list[int]] | None = None):
         self.keys, self.network, self.path = keys, network, path
+        self.paid = paid or {}  # txid -> indexes of the keys that paid it
 
     @classmethod
     def load(cls, path: pathlib.Path = WALLET, network: str = "signet") -> "Wallet":
@@ -47,13 +49,15 @@ class Wallet:
             w.save()
             return w
         d = json.loads(path.read_text())
-        return cls([Scalar.from_bytes_checked(bytes.fromhex(k)) for k in d["keys"]], d["network"], path)
+        return cls([Scalar.from_bytes_checked(bytes.fromhex(k)) for k in d["keys"]], d["network"], path,
+                   d.get("paid", {}))
 
     def save(self) -> None:
         if self.path is None:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps({"network": self.network, "keys": [k.to_bytes().hex() for k in self.keys]}))
+        self.path.write_text(json.dumps({"network": self.network, "keys": [k.to_bytes().hex() for k in self.keys],
+                                         "paid": self.paid}))
         self.path.chmod(0o600)
 
     def spk(self, key: Scalar) -> bytes:
@@ -102,10 +106,18 @@ class Wallet:
                           "prevout_txs": sorted({chain.get_tx(txid_to_hex(op.txid)).serialize().hex()
                                                  for op, _, _ in chosen})}
         txid = chain.broadcast(tx.serialize().hex())
+        self.paid[txid] = [next(i for i, k in enumerate(self.keys) if k is key) for _, _, key in chosen]
         if change >= DUST:
             self.keys.append(change_key)
-            self.save()
+        self.save()
         return txid, receipt
+
+    def receipt_for(self, chain, txid: str, address: str, memo: str):
+        """Sign another receipt for a payment this wallet made (any memo: a receipt can't stop that)."""
+        if txid not in self.paid:
+            raise WalletError(f"this wallet did not make payment {txid}")
+        tx, spks = chain.tx_with_prevouts(txid)
+        return make_sender_receipt(tx, spks, address, memo, [self.keys[i] for i in self.paid[txid]], self.network)
 
 
 def _http(method: str, url: str, body: dict | None = None) -> dict:

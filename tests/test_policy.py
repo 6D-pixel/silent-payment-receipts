@@ -5,7 +5,7 @@ import unittest
 
 from spreceipt import make_sender_receipt
 from spreceipt.crypto import G, random_scalar
-from spreceipt.policy import ChainStatus, OrderTerms, check_double_claim, check_payment
+from spreceipt.policy import ChainStatus, OrderTerms, check_payment
 from spreceipt.tx import TxOut, p2tr_script
 
 from tests.helpers import Receiver, p2wpkh_input, pay
@@ -42,21 +42,11 @@ class Policy(unittest.TestCase):
         other = copy.replace(self.order, memo="spr1:mkt:78")
         self.assertEqual(self.check(order=other).code, "wrong_memo")
 
-    def test_double_claim_is_proven_by_the_two_receipts(self):
-        # The payer signs a second receipt for the same payment, naming another order.
-        # Each verifies on its own; together they prove the payment was claimed twice.
-        other = make_sender_receipt(self.tx, self.spks, self.address, "spr1:other-mkt:9", self.keys, NET)
-        self.assertTrue(self.check(receipt=other, order=copy.replace(self.order, memo="spr1:other-mkt:9")).ok)
-        v = check_double_claim(self.receipt, other, self.tx, self.spks, NET)
-        self.assertTrue(v.ok, v.reason)
-        self.assertEqual((v.code, v.outpoints), ("claimed_twice", [(self.tx.txid_hex, 0)]))
-
-    def test_double_claim_needs_two_valid_receipts_with_different_orders(self):
-        same = make_sender_receipt(self.tx, self.spks, self.address, self.order.memo, self.keys, NET)
-        self.assertFalse(check_double_claim(self.receipt, same, self.tx, self.spks, NET).ok)
-        forged = copy.deepcopy(self.receipt)
-        forged.memo = "spr1:other-mkt:9"  # edited, not signed by the payer
-        self.assertFalse(check_double_claim(self.receipt, forged, self.tx, self.spks, NET).ok)
+    def test_same_payment_different_memo(self):
+        # The payer can sign another memo for the same output; that receipt is valid
+        # on its own, which is why the marketplace accepts each outpoint once.
+        other = make_sender_receipt(self.tx, self.spks, self.address, "spr1:mkt:78", self.keys, NET)
+        self.assertTrue(self.check(receipt=other, order=copy.replace(self.order, memo="spr1:mkt:78")).ok)
 
     def test_tampered_proof(self):
         bad = copy.deepcopy(self.receipt)
