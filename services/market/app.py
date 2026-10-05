@@ -5,9 +5,8 @@ It holds no money and no keys. At checkout it asks the shop's payment method
 If the shop says it was never paid, the marketplace checks that receipt against
 the chain with spreceipt.policy and rules on it.
 
-One transaction pays one order. Here, each outpoint can settle one order only.
-Elsewhere, the shop can show a second receipt the buyer signed for the same
-payment, naming another order; that proves the payment was claimed twice.
+One transaction pays one order: each outpoint can settle one order only. The
+buyer's receipt is also passed to the shop, which checks it on its own.
 
 Run:  .venv/bin/python -m services.market
 """
@@ -19,15 +18,15 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from spreceipt import Receipt, ReceiptFormatError
+from spreceipt import Receipt, ReceiptFormatError, verify_receipt
 from spreceipt.bip352 import decode_sp_address
-from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_double_claim, check_payment
+from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment
 from spreceipt.sources import SourceError, resolve
 
 from ..sppay.scanner import sign_body
@@ -44,7 +43,7 @@ CREATE TABLE IF NOT EXISTS orders (
     shop_status TEXT NOT NULL,    -- what the shop's payment method last reported
     receipt TEXT,
     verdict TEXT,
-    conflict TEXT,                -- proof that the buyer claimed this payment for another order
+    shop_check TEXT,              -- the shop's own check of the receipt we passed on
     created_at REAL NOT NULL
 );
 CREATE TABLE IF NOT EXISTS claims (
@@ -106,7 +105,7 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
         d["terms"] = json.loads(d["terms"])
         d["receipt"] = json.loads(d["receipt"]) if d["receipt"] else None
         d["verdict"] = json.loads(d["verdict"]) if d["verdict"] else None
-        d["conflict"] = json.loads(d["conflict"]) if d["conflict"] else None
+        d["shop_check"] = json.loads(d["shop_check"]) if d["shop_check"] else None
         return d
 
     def view(o: dict) -> dict:
@@ -115,31 +114,54 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
                 "address": t["shop_address"], "amount_sat": t["amount_sat"], "memo": t["memo"],
                 "network": t["network"], "pay_by_height": t["expires_height"], "invoice_id": o["invoice_id"],
                 "pay_url": o["pay_url"], "shop_status": o["shop_status"], "has_receipt": o["receipt"] is not None,
-                "verdict": o["verdict"]}
+                "verdict": o["verdict"], "shop_check": o["shop_check"], "payment": payment(o)}
+
+    def payment(o: dict) -> dict | None:
+        """Where the receipt's transaction is now: mempool, a block, or nowhere."""
+        if o["receipt"] is None:
+            return None
+        txid = o["receipt"]["txid"]
+        d = {"txid": txid, "explorer_url": cfg.explorer_tx_url + txid}
+        try:
+            height = chain.block_height(txid)
+            if height is None:
+                chain.get_tx(txid)  # raises if the transaction is unknown
+                return d | {"state": "mempool", "block_height": None, "confirmations": 0}
+            return d | {"state": "confirmed", "block_height": height, "confirmations": chain.tip_height() - height + 1}
+        except SourceError:
+            return d | {"state": "not_found", "block_height": None, "confirmations": 0}
 
     def evaluate(o: dict) -> Verdict:
         """Check the order's receipt against our own view of the chain."""
         if o["receipt"] is None:
             return Verdict(False, "no_receipt", "the buyer has not handed over a receipt")
-        if o["conflict"]:
-            return Verdict(False, "claimed_twice", o["conflict"]["reason"])
         receipt = Receipt.from_dict(o["receipt"])
         try:
             tx, spks, confs = resolve(chain, receipt.txid)
             height = chain.block_height(receipt.txid)
         except SourceError as e:
             return Verdict(False, "tx_not_found", f"could not fetch the transaction: {e}")
-        verdict = check_payment(receipt, tx, spks, OrderTerms(**o["terms"]), ChainStatus(confs, height),
-                                min_conf=cfg.min_conf)
-        if verdict.ok:
-            with lock:
-                for txid, vout in verdict.outpoints:
-                    row = db.execute("SELECT order_id FROM claims WHERE txid=? AND vout=?", (txid, vout)).fetchone()
-                    if row and row["order_id"] != o["id"]:
-                        return Verdict(False, "outpoint_taken", f"this payment already settled order {row['order_id']}")
-                for txid, vout in verdict.outpoints:
-                    db.execute("INSERT OR IGNORE INTO claims VALUES (?,?,?)", (txid, vout, o["id"]))
-        return verdict
+        # The first valid receipt for a payment claims it, even before it confirms.
+        taken = claim(o, receipt, tx, spks)
+        if taken:
+            return Verdict(False, "outpoint_taken", f"this payment was already claimed for order {taken}")
+        return check_payment(receipt, tx, spks, OrderTerms(**o["terms"]), ChainStatus(confs, height),
+                             min_conf=cfg.min_conf)
+
+    def claim(o: dict, receipt: Receipt, tx, spks) -> str | None:
+        """Reserve the outputs this receipt proves paid the shop. Returns the other order if one has them."""
+        result = verify_receipt(replace(receipt, network=cfg.network), tx, spks)
+        if not result.valid:
+            return None  # check_payment will say why
+        outpoints = [(tx.txid_hex, p["vout"]) for p in result.paid_outputs]
+        with lock:
+            for txid, vout in outpoints:
+                row = db.execute("SELECT order_id FROM claims WHERE txid=? AND vout=?", (txid, vout)).fetchone()
+                if row and row["order_id"] != o["id"]:
+                    return row["order_id"]
+            for txid, vout in outpoints:
+                db.execute("INSERT OR IGNORE INTO claims VALUES (?,?,?)", (txid, vout, o["id"]))
+        return None
 
     def save_verdict(o: dict, v: Verdict) -> dict:
         d = asdict(v) | {"checked_at": time.time()}
@@ -190,7 +212,17 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
             raise HTTPException(422, f"not a receipt: {e}")
         db.execute("UPDATE orders SET receipt=? WHERE id=?", (json.dumps(req.receipt), order_id))
         o["receipt"] = req.receipt
-        return {"order": view(load(order_id)), "verdict": save_verdict(o, evaluate(o))}
+        verdict = save_verdict(o, evaluate(o))
+        # Pass the receipt to the shop too, so it can check the payment itself.
+        try:
+            inv = sppay(shops[o["shop_id"]], "POST", f"/api/invoices/{o['invoice_id']}/receipt",
+                        {"receipt": req.receipt})
+            shop_check = inv["receipt_check"]
+            db.execute("UPDATE orders SET shop_status=? WHERE id=?", (inv["status"], order_id))
+        except HTTPException as e:
+            shop_check = {"ok": False, "code": "shop_unreachable", "reason": e.detail}
+        db.execute("UPDATE orders SET shop_check=? WHERE id=?", (json.dumps(shop_check), order_id))
+        return {"order": view(load(order_id)), "verdict": verdict}
 
     @app.post("/api/orders/{order_id}/dispute")
     def dispute(order_id: str):
@@ -199,29 +231,6 @@ def create_app(cfg: Config, chain, sppay=call_sppay) -> FastAPI:
         v = save_verdict(o, evaluate(o))
         ruling = "paid" if v["ok"] else ("waiting" if v["code"] == "unconfirmed" else "not_paid")
         return {"order": view(load(order_id)), "ruling": ruling, "verdict": v}
-
-    @app.post("/api/orders/{order_id}/conflict")
-    def conflict(order_id: str, req: SubmitReceipt):
-        """The shop shows a receipt the buyer signed for the same payment but another order."""
-        o = load(order_id)
-        if o["receipt"] is None:
-            raise HTTPException(409, "the buyer has not handed over a receipt for this order")
-        try:
-            mine, other = Receipt.from_dict(o["receipt"]), Receipt.from_dict(req.receipt)
-            tx, spks, _ = resolve(chain, mine.txid)
-        except ReceiptFormatError as e:
-            raise HTTPException(422, f"not a receipt: {e}")
-        except SourceError as e:
-            raise HTTPException(503, f"could not fetch the transaction: {e}")
-        v = check_double_claim(mine, other, tx, spks, cfg.network)
-        if v.ok:
-            db.execute("UPDATE orders SET conflict=? WHERE id=?",
-                       (json.dumps(asdict(v) | {"other_receipt": req.receipt}), order_id))
-            with lock:
-                db.execute("DELETE FROM claims WHERE order_id=?", (order_id,))
-            o = load(order_id)
-            save_verdict(o, evaluate(o))
-        return {"order": view(load(order_id)), "proven": v.ok, "reason": v.reason}
 
     @app.post("/webhooks/sppay")
     async def sppay_webhook(request: Request, sppay_sig: str = Header("")):

@@ -19,7 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from spreceipt.sources import SourceError
+from dataclasses import asdict
+
+from spreceipt import Receipt, ReceiptFormatError
+from spreceipt.policy import ChainStatus, OrderTerms, Verdict, check_payment
+from spreceipt.sources import SourceError, resolve
 
 from .config import Config
 from .scanner import Scanner, Webhooks
@@ -36,6 +40,10 @@ class PaidWith(BaseModel):
     txid: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class ReceiptIn(BaseModel):
+    receipt: dict
+
+
 def public(inv: dict, cfg: Config) -> dict:
     return {
         "id": inv["id"], "status": inv["status"], "address": cfg.address, "network": cfg.network,
@@ -43,6 +51,7 @@ def public(inv: dict, cfg: Config) -> dict:
         "price_sat": inv["price_sat"], "amount_sat": inv["amount_sat"],
         "created_height": inv["created_height"], "expires_height": inv["expires_height"],
         "txid": inv["txid"], "vouts": inv["vouts"], "paid_height": inv["paid_height"],
+        "receipt_check": inv["receipt_check"],
         "pay_url": f"{cfg.public_url}/pay/{inv['id']}",
     }
 
@@ -88,7 +97,10 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
 
     @app.get("/api/invoices/{inv_id}")
     def invoice(inv_id: str):
-        return public(get(inv_id), cfg)
+        inv = get(inv_id)
+        if inv["receipt"] and inv["receipt_check"]["code"] in ("unconfirmed", "tx_not_found"):
+            inv = check_receipt(inv, inv["receipt"])  # it may have confirmed since
+        return public(inv, cfg)
 
     @app.post("/api/invoices/{inv_id}/tx")
     def paid_with(inv_id: str, req: PaidWith):
@@ -101,6 +113,29 @@ def create_app(cfg: Config, chain, scan_in_background: bool = True) -> FastAPI:
         if found is None or found["id"] != inv["id"]:
             raise HTTPException(422, "this transaction does not pay this invoice (wrong amount, or it already paid another one)")
         return public(found, cfg)
+
+    def check_receipt(inv: dict, receipt: dict) -> dict:
+        """The shop's own check of a receipt, against its own view of the chain."""
+        r = Receipt.from_dict(receipt)
+        try:
+            scanner.check_tx(r.txid, inv["id"])
+            tx, spks, confs = resolve(chain, r.txid)
+            terms = OrderTerms(cfg.address, inv["memo"], inv["amount_sat"], cfg.network,
+                               inv["created_height"], inv["expires_height"])
+            v = check_payment(r, tx, spks, terms, ChainStatus(confs, chain.block_height(r.txid)))
+        except SourceError as e:
+            v = Verdict(False, "tx_not_found", f"could not fetch the transaction: {e}")
+        return store.save_receipt(inv["id"], receipt, asdict(v))
+
+    @app.post("/api/invoices/{inv_id}/receipt", dependencies=[Depends(merchant)])
+    def receipt(inv_id: str, req: ReceiptIn):
+        """The marketplace passes on the buyer's receipt; the shop checks it itself."""
+        inv = get(inv_id)
+        try:
+            Receipt.from_dict(req.receipt)
+        except ReceiptFormatError as e:
+            raise HTTPException(422, f"not a receipt: {e}")
+        return public(check_receipt(inv, req.receipt), cfg)
 
     @app.get("/pay/{inv_id}", response_class=HTMLResponse)
     def pay_page(inv_id: str):
