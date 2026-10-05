@@ -1,7 +1,9 @@
 // Dana's side: her one address, and the payments her scanner found, with the receipts buyers sent.
 
 import qrcode from "qrcode-generator";
-import { $, API, EXPLORER_TX, api, el, message, sat, short, showError, showTip, type Verdict } from "./services";
+import { API, EXPLORER_TX, api, el, makeView, message, sat, short, type Verdict } from "./services";
+
+const { root, $, showError, showTip } = makeView("shop");
 
 const POLL_MS = 10_000;
 
@@ -67,7 +69,7 @@ async function refresh(): Promise<void> {
   $("#p-empty").hidden = items.length > 0;
 }
 
-document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+root.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
   if (!info) return;
   const text = b.dataset.copy === "address" ? info.address : API.sppay;
   try {

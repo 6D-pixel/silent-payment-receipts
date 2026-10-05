@@ -1,7 +1,9 @@
 // The live page: one order on public signet, through the demo wallet, Dana's payment
 // method (sppay) and the marketplace. Everything here is a call to those three services.
 
-import { $, API, api, message, sat, short, showError, stamp, type Verdict } from "./services";
+import { API, api, makeView, message, sat, short, stamp, type Verdict } from "./services";
+
+const { root, $, showError } = makeView("live");
 
 const PRICE_SAT = 30_000;
 const POLL_MS = 10_000;
@@ -61,7 +63,7 @@ function stage(): number {
 
 function render(): void {
   const now = stage();
-  document.querySelectorAll<HTMLElement>(".track li").forEach((li, i) => {
+  root.querySelectorAll<HTMLElement>(".track li").forEach((li, i) => {
     li.dataset.on = i + 1 < now || now === 5 ? "done" : i + 1 === now ? "now" : "";
   });
 

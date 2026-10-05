@@ -2,9 +2,10 @@
 // and have the marketplace check it.
 
 import {
-  $, API, EXPLORER_TX, api, busy, download, el, message, sat, short, showError, showTip, stamp, txLine,
-  type TxStatus, type Verdict,
+  API, EXPLORER_TX, api, download, el, makeView, message, sat, short, stamp, txLine, type TxStatus, type Verdict,
 } from "./services";
+
+const { $, busy, showError, showTip } = makeView("pay");
 
 const POLL_MS = 10_000;
 const SAVED = "spr-wallet-payment";
