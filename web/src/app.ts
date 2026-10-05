@@ -1,6 +1,8 @@
 // One page, four sections. The nav switches between them by the URL hash (#live, #pay, #shop),
 // and each section's script loads the first time it is shown.
 
+import { showFilm } from "./film";
+
 const sections: Record<string, () => Promise<unknown>> = {
   comic: () => import("./main"),
   live: () => import("./live"),
@@ -14,6 +16,7 @@ function show(): void {
   const wanted = location.hash.slice(1);
   const name = wanted in sections ? wanted : "comic";
   for (const key of Object.keys(sections)) document.getElementById(`view-${key}`)!.hidden = key !== name;
+  showFilm(name === "comic");
   document.querySelectorAll<HTMLAnchorElement>(".tabs [data-view]").forEach((a) => {
     if (a.dataset.view === name) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
