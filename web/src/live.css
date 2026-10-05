@@ -181,6 +181,11 @@
 #story-start { scroll-margin-top: var(--nav-h, 0px); }
 .film video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .film-controls { position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
+#film-sound { gap: 0.5rem; }
+#film-sound[data-muted="true"] { background: var(--yellow); }
+.speaker { width: 1.45rem; height: 1.45rem; flex: none; }
+#film-sound[data-muted="true"] .waves, #film-sound:not([data-muted="true"]) .cross { display: none; }
+.film video { cursor: pointer; }
 @media (max-width: 760px), (max-aspect-ratio: 4/3) {
   .film { height: auto; }
   .film video { height: auto; aspect-ratio: 16 / 9; }
