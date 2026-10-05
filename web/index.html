@@ -104,7 +104,16 @@
   </nav>
   <section class="view" id="view-comic">
 
-  <header class="top">
+  <section class="film" aria-label="Video: how a receipt works">
+    <video id="film" src="/mechanism.mp4" poster="/mechanism-poster.jpg" muted playsinline preload="metadata"></video>
+    <div class="film-controls">
+      <button type="button" class="ghost" id="film-sound">Play with sound</button>
+      <button type="button" class="ghost" id="film-pause">Pause</button>
+      <button type="button" class="ghost" id="film-skip">Skip to the story</button>
+    </div>
+  </section>
+
+  <header class="top" id="story-start">
     <div class="top-inner">
       <div class="intro">
         <h1>Pay privately.<br>Still prove it.</h1>
