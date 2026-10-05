@@ -100,3 +100,16 @@ def check_payment(receipt: Receipt, tx: Tx, prevout_spks: list[bytes], order: Or
     return Verdict(True, "ok", "the receipt proves this order was paid",
                    [(tx.txid_hex, o["vout"]) for o in result.paid_outputs], result.total_sat)
 
+
+def check_receipt(receipt: Receipt, tx: Tx, prevout_spks: list[bytes], shop_address: str, network: str,
+                  status: ChainStatus, min_conf: int = 1) -> Verdict:
+    """A receipt with no order behind it: did it pay this shop, and is that confirmed?
+
+    The same checks as check_payment except the order's price and time window,
+    which don't exist here. The memo is whatever the payer wrote.
+    """
+    terms = OrderTerms(shop_address, receipt.memo, 1, network, created_height=-1, expires_height=2**31)
+    v = check_payment(receipt, tx, prevout_spks, terms, status, min_conf)
+    if v.ok:
+        v.reason = f"the receipt proves {v.amount_sat:,} sat was paid to this shop for {receipt.memo!r}"
+    return v

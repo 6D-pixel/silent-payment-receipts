@@ -1,19 +1,14 @@
 // The live page: one order on public signet, through the demo wallet, Dana's payment
 // method (sppay) and the marketplace. Everything here is a call to those three services.
 
-const API = {
-  wallet: import.meta.env.VITE_WALLET_URL ?? "http://127.0.0.1:8403",
-  market: import.meta.env.VITE_MARKET_URL ?? "http://127.0.0.1:8402",
-  sppay: import.meta.env.VITE_SPPAY_URL ?? "http://127.0.0.1:8401",
-  chain: "https://mempool.space/signet/api",
-};
+import { $, API, api, message, sat, short, showError, stamp, type Verdict } from "./services";
+
 const PRICE_SAT = 30_000;
 const POLL_MS = 10_000;
 const SAVED = "spr-live-order";
 
 // ---------------------------------------------------------------- what the services return
 
-interface Verdict { ok: boolean; code: string; reason: string; amount_sat: number }
 interface Payment { txid: string; state: "mempool" | "confirmed" | "not_found"; block_height: number | null; confirmations: number; explorer_url: string }
 interface Order {
   id: string; shop: string; item: string; address: string; amount_sat: number; memo: string; invoice_id: string;
@@ -25,62 +20,13 @@ interface PayResult { txid: string; receipt: object; order: Order; verdict: Verd
 interface Saved { orderId: string; txid?: string; receipt?: object; paidAt?: number; ruling?: Ruling; cheat?: Verdict }
 interface Ruling { ruling: "paid" | "not_paid" | "waiting"; verdict: Verdict }
 
-class ApiError extends Error {}
-
-async function api<T>(base: string, path: string, body?: object): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(base + path, body === undefined ? {} : {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError(`Can't reach ${base}. Is the service running?`);
-  }
-  const text = await res.text();
-  if (!res.ok) {
-    let detail = text;
-    try { detail = JSON.parse(text).detail ?? text; } catch { /* plain text */ }
-    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail));
-  }
-  return JSON.parse(text) as T;
-}
-
 // ---------------------------------------------------------------- small helpers
-
-const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
-const sat = (n: number) => `${n.toLocaleString("en-US")} sat`;
-const short = (s: string, n = 10) => (s.length > 2 * n + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s);
 
 function load(): Saved | null {
   try { return JSON.parse(localStorage.getItem(SAVED) ?? "null"); } catch { return null; }
 }
 function save(s: Saved | null): void {
   try { s ? localStorage.setItem(SAVED, JSON.stringify(s)) : localStorage.removeItem(SAVED); } catch { /* private window */ }
-}
-
-function stamp(ok: boolean, word: string, reason: string, extra?: string): HTMLElement {
-  const box = document.createElement("div");
-  box.className = `verdict ${ok ? "ok" : "bad"}`;
-  box.setAttribute("role", "status");
-  const s = document.createElement("p");
-  s.className = "stamp";
-  s.textContent = word;
-  const r = document.createElement("p");
-  r.textContent = reason;
-  box.append(s, r);
-  if (extra) {
-    const e = document.createElement("p");
-    e.className = "small muted";
-    e.textContent = extra;
-    box.append(e);
-  }
-  return box;
-}
-
-function showError(message: string | null): void {
-  const el = $("#offline");
-  el.hidden = !message;
-  el.textContent = message ?? "";
 }
 
 async function busy(button: HTMLButtonElement, work: () => Promise<void>): Promise<void> {
@@ -90,7 +36,7 @@ async function busy(button: HTMLButtonElement, work: () => Promise<void>): Promi
     await work();
     showError(null);
   } catch (e) {
-    showError(e instanceof Error ? e.message : String(e));
+    showError(message(e));
   } finally {
     button.removeAttribute("aria-busy");
     render();
@@ -191,7 +137,7 @@ function render(): void {
   if (!r) ruling.replaceChildren();
   else if (r.ruling === "paid") ruling.replaceChildren(stamp(true, "Paid", "The receipt proves you paid this order. Dana's claim is rejected.",
     `Checked: the payment to Dana's address, the order ${order?.memo ?? ""}, ${sat(r.verdict.amount_sat)}, confirmed.`));
-  else if (r.ruling === "waiting") ruling.replaceChildren(stamp(false, "Wait", "The receipt is good, but the payment isn't in a block yet. Ask again after the next block."));
+  else if (r.ruling === "waiting") ruling.replaceChildren(stamp("wait", "Wait", "The receipt is good, but the payment isn't in a block yet. Ask again after the next block."));
   else ruling.replaceChildren(stamp(false, "Not paid", r.verdict.reason));
 
   const cheat = $<HTMLButtonElement>("#cheat");
@@ -231,7 +177,7 @@ async function poll(): Promise<void> {
     await refresh();
     showError(null);
   } catch (e) {
-    showError(e instanceof Error ? e.message : String(e));
+    showError(message(e));
   }
   setTimeout(poll, POLL_MS);
 }
@@ -284,5 +230,5 @@ $<HTMLButtonElement>("#restart").addEventListener("click", () => {
   render();
 });
 
-refreshWallet().catch((e) => showError(e instanceof Error ? e.message : String(e)));
+refreshWallet().catch((e) => showError(message(e)));
 poll();

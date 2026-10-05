@@ -270,6 +270,48 @@ class Checkout(unittest.TestCase):
         self.assertEqual(self.dispute(second)["verdict"]["code"], "outpoint_taken")
         self.assertEqual(self.dispute(o)["ruling"], "paid")
 
+    def send(self, amount=25_000, memo="Order 1001", address=None):
+        r = self.wallet.post("/api/send", json={"address": address or self.keys.address("signet"),
+                                                "amount_sat": amount, "memo": memo})
+        self.assertEqual(r.status_code, 200, r.text)
+        return r.json()
+
+    def test_pay_the_shop_address_directly(self):
+        open_invoice = self.order(price=25_000)  # same amount: a direct payment must not settle it
+        paid = self.send()
+        rep = self.sppay.post("/api/payments/report", json={"txid": paid["txid"], "receipt": paid["receipt"]}).json()
+        self.assertEqual(rep["receipt_check"]["code"], "unconfirmed")
+        check = lambda receipt: self.market.post("/api/check", json={"receipt": receipt}).json()
+        first = check(paid["receipt"])
+        self.assertEqual((first["kind"], first["shop"], first["verdict"]["code"]), ("direct", "Dana's Phones", "unconfirmed"))
+
+        self.chain.mine()
+        self.scanner.poll()
+        v = check(paid["receipt"])["verdict"]
+        self.assertTrue(v["ok"], v)
+        self.assertEqual(v["amount_sat"], 25_000)
+        [p] = self.sppay.get("/api/payments").json()
+        self.assertEqual((p["txid"], p["invoice_id"], p["receipt"]["memo"]), (paid["txid"], None, "Order 1001"))
+        self.assertTrue(p["receipt_check"]["ok"])  # re-checked once confirmed
+        self.assertEqual(self.invoice(open_invoice)["status"], "open")
+        late = self.sppay.post(f"/api/invoices/{open_invoice['invoice_id']}/tx", json={"txid": paid["txid"]})
+        self.assertEqual(late.status_code, 422)  # reported as direct, it can't pay an invoice later
+
+        # The same payment, a receipt naming something else: the first claim stands.
+        other = self.wallet.post("/api/reuse", json={"txid": paid["txid"], "order_id": open_invoice["id"]}).json()
+        self.assertEqual(other["verdict"]["code"], "outpoint_taken")
+
+    def test_check_rejects_unknown_shop_and_bad_input(self):
+        from services.keys import WatchKeys
+        stranger = WatchKeys(random_scalar(), random_scalar() * G).address("signet")
+        paid = self.send(address=stranger)
+        self.assertEqual(self.market.post("/api/check", json={"receipt": paid["receipt"]}).json()["verdict"]["code"],
+                         "unknown_shop")
+        bad = self.wallet.post("/api/send", json={"address": "tb1qxyz", "amount_sat": 1000, "memo": "x"})
+        self.assertEqual(bad.status_code, 422)
+        small = self.wallet.post("/api/send", json={"address": stranger, "amount_sat": 100, "memo": "x"})
+        self.assertEqual(small.status_code, 422)
+
     def test_webhook_needs_the_shop_signature(self):
         from services.sppay.scanner import sign_body
         o = self.order()

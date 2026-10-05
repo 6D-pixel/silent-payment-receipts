@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live on Signet</title>
-  <meta name="description" content="Buy from a shop on public Bitcoin signet with a silent payment, then settle a never-paid dispute with the receipt.">
+  <title>Dana's Shop</title>
+  <meta name="description" content="A shop's side of silent payments on signet: one address, and the payments its scanner found with their receipts.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Lilita+One&family=Luckiest+Guy&family=Patrick+Hand&display=swap">
@@ -98,97 +98,49 @@
     </defs>
   </svg>
 
-  <header class="top">
-    <div class="top-inner">
-      <div class="intro">
-        <h1>Now for real.<br>On signet.</h1>
-        <p>Same story, real network: public Bitcoin signet. You pay Dana's one shop address from a demo wallet that is already signed in. The payment waits in the mempool until a block comes, about every 10 minutes. Then Dana says she was never paid, and the marketplace checks your receipt.</p>
-      </div>
-      <ul class="cast" aria-label="The characters">
-        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg><span class="cast-name">You</span><span class="cast-role">the buyer</span></li>
-        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg><span class="cast-name">Dana</span><span class="cast-role">the phone shop</span></li>
-        <li><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg><span class="cast-name">Marketplace</span><span class="cast-role">checks the receipt</span></li>
-      </ul>
+  <header class="top top-slim">
+    <div class="intro">
+      <h1>Dana's shop.</h1>
+      <p>This is the shop's side. Dana shows one silent-payment address everywhere. Her payment software holds only the keys that find payments, not the one that spends them, and lists what it found with the receipts buyers sent.</p>
     </div>
     <div class="controls">
       <p class="chain-chip live-chip"><span class="dot" aria-hidden="true"></span><span id="tip">Public signet</span></p>
-      <nav class="pages" aria-label="Pages"><a href="./">The comic</a><a href="./live.html" aria-current="page">Live order</a><a href="./wallet.html">Pay a shop</a><a href="./shop.html">Shop</a></nav>
-      <div class="buttons">
-        <button type="button" id="restart" class="ghost">Start a new order</button>
-      </div>
+      <nav class="pages" aria-label="Pages"><a href="./">The comic</a><a href="./live.html">Live order</a><a href="./wallet.html">Pay a shop</a><a href="./shop.html" aria-current="page">Shop</a></nav>
     </div>
     <p id="offline" class="error" role="alert" hidden></p>
   </header>
 
   <main>
-    <ol class="track" aria-label="Where the order is">
-      <li data-stage="order">Order placed</li>
-      <li data-stage="mempool">In the mempool</li>
-      <li data-stage="block">In a block</li>
-      <li data-stage="dispute">Dana disputes</li>
-      <li data-stage="ruling">Ruling</li>
-    </ol>
-
-    <div class="desk">
-      <section class="desk-panel" id="buyer" aria-labelledby="buyer-h">
-        <h2 id="buyer-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-you"/></svg>Your wallet</h2>
+    <div class="desk desk-two">
+      <section class="desk-panel" id="shop" aria-labelledby="key-h">
+        <h2 id="key-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Shop key</h2>
         <div class="desk-body">
+          <p class="note">Demo key loaded.</p>
+          <p class="small muted">For this demo the shop uses one built-in key. A real shop brings its own: this software needs the scan key and the public spend key, and the spend key stays in Dana's wallet.</p>
           <dl class="facts">
-            <dt>Balance</dt><dd id="w-balance">…</dd>
-            <dt>Address</dt><dd><code id="w-address">…</code></dd>
+            <dt>Shop</dt><dd id="s-name">…</dd>
+            <dt>Network</dt><dd id="s-network">…</dd>
+            <dt>Address</dt><dd><code id="s-address">…</code> <button type="button" class="copy" data-copy="address">Copy</button></dd>
+            <dt>Shop link</dt><dd><code id="s-link"></code> <button type="button" class="copy" data-copy="link">Copy</button></dd>
           </dl>
-          <p class="empty-wallet" id="w-empty" hidden>The demo wallet is empty. Send it some signet coins from a faucet, then reload.</p>
-          <button type="button" class="act" id="buy" disabled>Buy the phone for 30,000 sat</button>
-          <button type="button" class="act" id="pay" hidden disabled>Pay from the demo wallet</button>
-          <div id="paid" hidden>
-            <p class="note">Paid. Your wallet made a receipt and gave it to the marketplace.</p>
-            <dl class="facts">
-              <dt>Transaction</dt><dd><a id="tx-link" target="_blank" rel="noopener"><code id="txid"></code></a></dd>
-            </dl>
-            <button type="button" class="ghost" id="download">Download the receipt</button>
-            <details class="raw"><summary>Show the receipt</summary><pre id="receipt-json"></pre></details>
-          </div>
+          <div class="qr-tile" id="s-qr" role="img" aria-label="QR code of the shop's address"></div>
         </div>
       </section>
 
-      <section class="desk-panel" id="shop" aria-labelledby="shop-h">
-        <h2 id="shop-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Dana's payment page</h2>
+      <section class="desk-panel" id="market" aria-labelledby="pays-h">
+        <h2 id="pays-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-dana"/></svg>Payments received</h2>
         <div class="desk-body">
-          <p class="state" id="shop-state" data-s="none">No order yet</p>
-          <dl class="facts" id="invoice" hidden>
-            <dt>Pay to</dt><dd><code id="i-address"></code></dd>
-            <dt>Amount</dt><dd id="i-amount"></dd>
-            <dt>Memo</dt><dd><code id="i-memo"></code></dd>
-            <dt>Shop's check</dt><dd id="i-check">Waiting for the receipt</dd>
-          </dl>
-          <a id="pay-page" class="small" target="_blank" rel="noopener" hidden>Open Dana's pay page</a>
-          <button type="button" class="act dispute" id="dispute" disabled>Say “I was never paid”</button>
-        </div>
-      </section>
-
-      <section class="desk-panel" id="market" aria-labelledby="market-h">
-        <h2 id="market-h"><svg viewBox="0 0 120 130" aria-hidden="true"><use href="#c-ref"/></svg>Marketplace</h2>
-        <div class="desk-body">
-          <p class="state" id="m-payment" data-s="none">Waiting for an order</p>
-          <p class="small muted" id="m-wait" hidden></p>
-          <div id="ruling" aria-live="polite"></div>
+          <p class="small muted" id="p-scan">…</p>
+          <ul class="payments" id="payments"></ul>
+          <p class="state" id="p-empty" data-s="none">No payments yet. Pay Dana from the <a href="./wallet.html">Pay a shop</a> page.</p>
         </div>
       </section>
     </div>
-
-    <section class="cheat-live" aria-labelledby="cheat-h">
-      <h2 id="cheat-h">Try to cheat</h2>
-      <div class="cheat-live-body">
-        <p>Sign a second receipt for the same payment, naming a new order. A receipt can't stop you writing another order on it, but the marketplace accepts each payment for one order only.</p>
-        <button type="button" class="act" id="cheat" disabled>Reuse the payment for a second order</button>
-        <div id="cheat-out" aria-live="polite"></div>
-      </div>
-    </section>
   </main>
 
   <footer>
-    <p>Public signet coins have no value. The demo wallet and the services run on this machine; the receipt code is the same pure-Python prototype as the comic. <a href="https://github.com/6D-pixel/silent-payment-receipts">Source on GitHub</a>.</p>
+    <p>Public signet coins have no value. The demo wallet, Dana's shop and the marketplace run on this machine, with the same pure-Python receipt code as the comic. <a href="https://github.com/6D-pixel/silent-payment-receipts">Source on GitHub</a>.</p>
   </footer>
-  <script type="module" src="/src/live.ts"></script>
+  <script type="module" src="/src/shop.ts"></script>
 </body>
 </html>

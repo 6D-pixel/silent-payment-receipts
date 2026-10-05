@@ -55,20 +55,26 @@ class Scanner:
         return [{"vout": m.vout, "k": m.k, "amount_sat": tx.vout[m.vout].value}
                 for m in scan(self.keys.b_scan, self.keys.B_spend, [], tx, spks)]
 
-    def process(self, tx: Tx, spks: list[bytes], height: int | None, for_invoice: str | None = None) -> dict | None:
+    def process(self, tx: Tx, spks: list[bytes], height: int | None, for_invoice: str | None = None,
+                direct: bool = False) -> dict | None:
         """Record what tx pays the shop and settle the invoice it is for. Returns that invoice.
 
-        for_invoice is the invoice the payer's wallet said it paid; otherwise the
-        payment is matched only if exactly one open invoice fits it.
+        for_invoice is the invoice the payer's wallet said it paid. direct means the
+        payer said it paid the shop's address outside any invoice. Otherwise the
+        payment is matched only if exactly one open invoice has exactly its amount.
         """
         paid = self.find(tx, spks)
         if not paid:
             return None
         total = sum(o["amount_sat"] for o in paid)
         txid = tx.txid_hex
-        known = [p for p in self.store.payments(txid) if p["invoice_id"]]
+        rows = self.store.payments(txid)
+        known = [p for p in rows if p["invoice_id"]]
+        direct = direct or any(p["direct"] for p in rows)
         if known:  # one transaction pays one invoice, whatever is claimed later
             inv = self.store.invoice(known[0]["invoice_id"])
+        elif direct:  # the payer said it paid outside any invoice; that can't change later
+            inv = None
         elif for_invoice:
             inv = self.store.invoice(for_invoice)
             if inv and (inv["status"] not in ("open", "seen") or total < inv["amount_sat"]):
@@ -78,7 +84,8 @@ class Scanner:
         if inv and height is not None and not (inv["created_height"] < height <= inv["expires_height"]):
             inv = None  # seen in time, but confirmed outside the invoice's window
         for o in paid:
-            self.store.record_payment(txid, o["vout"], o["k"], o["amount_sat"], height, inv["id"] if inv else None)
+            self.store.record_payment(txid, o["vout"], o["k"], o["amount_sat"], height, inv["id"] if inv else None,
+                                      direct)
         if inv is None:
             log.info("payment %s (%d sat) matches no open invoice", txid, total)
             return None
@@ -89,6 +96,12 @@ class Scanner:
             inv = self.store.mark(inv["id"], status, txid, [o["vout"] for o in paid], height)
             self.webhooks.send(f"invoice.{status}", inv)
         return inv
+
+    def check_direct(self, txid: str) -> list[dict]:
+        """The payer says txid paid the shop's address directly. Returns what it pays the shop."""
+        tx, spks = self.chain.tx_with_prevouts(txid)
+        self.process(tx, spks, self.chain.block_height(txid), direct=True)
+        return self.store.payments(txid)
 
     def check_tx(self, txid: str, invoice_id: str) -> dict | None:
         """The payer says txid pays invoice_id: look at it now instead of waiting for the block."""

@@ -15,8 +15,9 @@ import urllib.request
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from spreceipt.bip352 import SP_HRP, decode_sp_address
 from spreceipt.sources import SourceError
 
 from ..buyer import Wallet, WalletError
@@ -29,6 +30,12 @@ class PayOrder(BaseModel):
 class Reuse(BaseModel):
     txid: str
     order_id: str
+
+
+class Send(BaseModel):
+    address: str = Field(max_length=200)
+    amount_sat: int = Field(ge=330, le=10_000_000)  # 330 sat is the smallest taproot output nodes relay
+    memo: str = Field(min_length=1, max_length=200)
 
 
 def http(method: str, url: str, body: dict | None = None) -> dict:
@@ -74,6 +81,34 @@ def create_app(wallet: Wallet, chain, market_url: str, http=http) -> FastAPI:
             pass  # the shop's scanner will still find it in the block
         res = http("POST", f"{market_url}/api/orders/{req.order_id}/receipt", {"receipt": receipt.to_dict()})
         return {"txid": txid, "receipt": receipt.to_dict(), "order": res["order"], "verdict": res["verdict"]}
+
+    @app.get("/api/tx/{txid}")
+    def tx_status(txid: str):
+        """Where a payment is now, from the wallet's view of the chain."""
+        try:
+            height = chain.block_height(txid)
+            if height is None:
+                chain.get_tx(txid)
+                return {"state": "mempool", "block_height": None, "confirmations": 0}
+            return {"state": "confirmed", "block_height": height, "confirmations": chain.tip_height() - height + 1}
+        except SourceError:
+            return {"state": "not_found", "block_height": None, "confirmations": 0}
+
+    @app.post("/api/send")
+    def send(req: Send):
+        """Pay any silent-payment address and return the receipt. The page passes it on."""
+        try:
+            hrp, _, _ = decode_sp_address(req.address.strip())
+        except ValueError as e:
+            raise HTTPException(422, f"not a silent-payment address: {e}")
+        if hrp != SP_HRP[wallet.network]:
+            raise HTTPException(422, f"this is a {hrp} address; the demo wallet is on {wallet.network}")
+        with lock:
+            try:
+                txid, receipt = wallet.pay(chain, req.address.strip(), req.amount_sat, req.memo)
+            except (WalletError, SourceError) as e:
+                raise HTTPException(400, str(e))
+        return {"txid": txid, "receipt": receipt.to_dict()}
 
     @app.post("/api/reuse")
     def reuse(req: Reuse):
