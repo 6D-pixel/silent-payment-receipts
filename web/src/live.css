@@ -108,6 +108,7 @@
 .tabs a[aria-current="page"] { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
 .tabs .tabs-brand { margin-right: auto; padding-left: 0; border: 0; background: none; font: 400 1.25rem/1 var(--shout); letter-spacing: 0.02em; }
 .tabs .tabs-brand:hover { background: none; }
+.tabs .tabs-brand img { width: 2.1rem; height: 2.1rem; margin-right: 0.55rem; flex: none; }
 @media (max-width: 640px) {
   .tabs-inner { gap: 0.35rem; padding: 0.45rem 0.6rem; }
   .tabs .tabs-brand { flex-basis: 100%; font-size: 1.1rem; min-height: 1.8rem; }
