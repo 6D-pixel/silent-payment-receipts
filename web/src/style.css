@@ -54,7 +54,7 @@ h1, h2, h3, p, dl, dd, ul, ol { overflow-wrap: break-word; }
 
 /* ------------------------------------------------------------ cover */
 
-.top { position: relative; padding: clamp(1.5rem, 5vw, 3.5rem) 1rem 1.5rem; overflow: hidden; }
+.top { position: relative; padding: clamp(1.5rem, 5vw, 3.5rem) 1rem 1.5rem; overflow: hidden; overflow: clip visible; }  /* clip the cast sideways, let the chain note drop below */
 .top-inner {
   position: relative; max-width: 1180px; margin: 0 auto;
   display: grid; gap: 2rem 3rem; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); align-items: end;
