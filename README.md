@@ -1,3 +1,5 @@
+<img src="docs/logo.png" width="96" align="right" alt="Silent Payment Receipts logo: a Bitcoin receipt with a green check stamp">
+
 # Silent Payment Receipts
 
 Prove that you paid a Bitcoin silent-payment address.
